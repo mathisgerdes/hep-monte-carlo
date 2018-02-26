@@ -19,7 +19,7 @@ np.random.seed(1234)
 
 ndim = 1
 #ndim = 2
-nsamples = 5000
+nsamples = 2000
 
 target = Camel()
 target_pdf = counted(target.pdf)
@@ -31,6 +31,7 @@ importance_sampler =  StaticMultiChannelImportanceSampler(ndim, target_pdf, is_p
 
 start = 1/3
 #start = np.full(ndim, 0.5)
+target_pdf.called = 0
 t_start = timer()
 samples = importance_sampler.sample(nsamples, start)
 t_end = timer()

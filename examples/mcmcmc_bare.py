@@ -66,6 +66,7 @@ importance_sampler.is_adaptive = False
 sampler_weights = [0.5, 0.5]
 sampler = MixedSampler([metropolis_sampler, importance_sampler], sampler_weights)
 
+target_pdf.called = 0
 t_start = timer()
 samples = sampler.sample(nsamples, start)
 t_end = timer()

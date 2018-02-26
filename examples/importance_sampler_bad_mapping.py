@@ -2,7 +2,7 @@ from samplers.mcmc.importance_sampler import StaticMultiChannelImportanceSampler
 from densities.camel import Camel
 from proposals.gaussian import Gaussian
 from plotting.plot_1d import plot_1d
-#from plotting.plot_2d import plot_2d
+from plotting.plot_2d import plot_2d
 import numpy as np
 from timeit import default_timer as timer
 
@@ -48,5 +48,7 @@ print('Number of accepted points: ', n_accepted)
 print('Number of target calls: ', n_target_calls)
 print('Sampling probability: ', n_accepted/n_target_calls)
 
-plot_1d(samples, target.pdf, mapping_pdf=importance_sampler.proposal_dist.pdf)
-#plot_2d(samples, target.pdf)
+if ndim == 1:
+    plot_1d(samples, target.pdf, mapping_pdf=importance_sampler.proposal_dist.pdf)
+elif ndim == 2:
+    plot_2d(samples, target.pdf)

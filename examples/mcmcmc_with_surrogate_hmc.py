@@ -6,12 +6,14 @@ from densities.camel import UnconstrainedCamel
 from proposals.gaussian import Gaussian
 from proposals.gaussian import IsotropicZeroMeanGaussian
 from plotting.plot_1d import plot_1d
-#from plotting.plot_2d import plot_2d
+from plotting.plot_2d import plot_2d
 import numpy as np
 
 np.random.seed(1234)
 
-ndim = 1
+#ndim = 1
+ndim = 2
+
 nsamples = 2000
 ntrain = 1000
 nburnin = 1000
@@ -31,6 +33,7 @@ def importance_sampler_adapt_schedule(t):
         return False
 
 target = UnconstrainedCamel()
+
 start = np.full(ndim, 0.5)
 
 # initialise importance sampler
@@ -45,8 +48,6 @@ importance_sampler.is_adaptive = False
 
 # generate training samples
 train_samples = importance_sampler.sample(ntrain, start)
-#train_samples = np.array(train_samples)
-print(train_samples)
 
 # train the surrogate
 surrogate = KernelExpLiteGaussianSurrogate(ndim=ndim, sigma=0.5, lmbda=0.0001, N=ntrain)
@@ -59,7 +60,9 @@ hmc_sampler = StaticHMC(ndim, target.pdf, surrogate.log_pdf_gradient, 0.05, 0.1,
 sampler_weights = [0.5, 0.5]
 sampler = MixedSampler([hmc_sampler, importance_sampler], sampler_weights)
 
-samples = sampler.sample(nsamples, ndim*[0.5])
+samples = sampler.sample(nsamples, start)
 
-plot_1d(samples, target.pdf, mapping_pdf=importance_sampler.proposal_dist.pdf)
-#plot_2d(samples, target.pdf)
+if ndim == 1:
+    plot_1d(samples, target.pdf, mapping_pdf=importance_sampler.proposal_dist.pdf, target_log_pdf_gradient=target.log_pdf_gradient, surrogate_log_pdf_gradient=surrogate.log_pdf_gradient)
+elif ndim == 2:
+    plot_2d(samples, target.pdf)

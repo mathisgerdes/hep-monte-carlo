@@ -27,7 +27,7 @@ target_pdf = counted(target.pdf)
 start = np.full(ndim, 0.5)
 
 is_proposal_dists = [Gaussian(mu=ndim*[1/3], cov=0.005), Gaussian(mu=ndim*[2/3], cov=0.005)]
-is_proposal_weights = [0.5, 0.5]
+is_proposal_weights = np.array([0.5, 0.5])
 importance_sampler =  StaticMultiChannelImportanceSampler(ndim, target_pdf, is_proposal_dists, is_proposal_weights)
 
 start = np.full(ndim, 0.5)

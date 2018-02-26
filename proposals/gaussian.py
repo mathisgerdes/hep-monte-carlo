@@ -13,7 +13,7 @@ class Gaussian(Proposal):
         if cov is None:
             cov = self.cov
             
-        return multivariate_normal.pdf(x, mu, cov)
+        return np.atleast_1d(multivariate_normal.pdf(x, mu, cov))
     
     def rvs(self, mu=None, cov=None):
         if mu is None:
@@ -21,7 +21,7 @@ class Gaussian(Proposal):
         if cov is None:
             cov = self.cov
             
-        return multivariate_normal.rvs(mu, cov)
+        return np.atleast_1d(multivariate_normal.rvs(mu, cov))
 
 class IsotropicZeroMeanGaussian(Proposal):
     def __init__(self, ndim, cov=1):
@@ -30,17 +30,17 @@ class IsotropicZeroMeanGaussian(Proposal):
         self.ndim = ndim
         
     def pdf(self, x):
-        return multivariate_normal.pdf(x, mean=np.zeros(self.ndim), cov=np.sqrt(self.cov))
+        return np.atleast_1d(multivariate_normal.pdf(x, mean=np.zeros(self.ndim), cov=np.sqrt(self.cov)))
     
     def log_pdf(self, x):
         D = len(x)
         const_part = -0.5 * D * np.log(2 * np.pi)
         quadratic_part = -np.dot(x, x) / (2 * (self.cov))
         log_determinant_part = -0.5 * D * np.log(self.cov)
-        return const_part + log_determinant_part + quadratic_part
+        return np.atleast_1d(const_part + log_determinant_part + quadratic_part)
     
     def log_pdf_gradient(self, x):
-        return -x / self.cov
+        return np.atleast_1d(-x / self.cov)
     
     def rvs(self):
-        return np.random.randn(self.ndim) * np.sqrt(self.cov)
+        return np.atleast_1d(np.random.randn(self.ndim) * np.sqrt(self.cov))

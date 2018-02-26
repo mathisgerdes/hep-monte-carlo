@@ -35,21 +35,24 @@ class AdaptiveMultiChannelImportanceSampler(StaticMultiChannelImportanceSampler)
         super().__init__(ndim, target_pdf, proposal_dists, initial_weights, is_adaptive=True)
         self.adapt_schedule = adapt_schedule
         
-        self.variance_grad = len(proposal_dists)*[None]
+        self.variance_grad = np.zeros(len(proposal_dists))
         
     def adapt(self, t, current, current_pdf, previous, previous_pdf):
         weight = current_pdf / self.proposal_dist.pdf(current)
         if t==1:
-            self.variance_grad = [proposal.pdf(current)/self.proposal_dist.pdf(current) * weight**2 for proposal in self.proposal_dist.proposals]
+            for i, proposal in enumerate(self.proposal_dist.proposals):
+                self.variance_grad[i] = proposal.pdf(current)/self.proposal_dist.pdf(current) * weight**2
         
         else:
-            self.variance_grad = [1/(t+1) * (t*variance_grad_i + proposal.pdf(current)/self.proposal_dist.pdf(current) * weight**2) for variance_grad_i, proposal in zip(self.variance_grad, self.proposal_dist.proposals)]
+            for i, proposal in enumerate(self.proposal_dist.proposals):
+                self.variance_grad[i] = 1/(t+1) * (t*self.variance_grad[i] + proposal.pdf(current)/self.proposal_dist.pdf(current) * weight**2)
         
         if self.adapt_schedule(t) is True:
-            new_weights = [old_weight*np.sqrt(variance_grad_i) for old_weight, variance_grad_i in zip(self.proposal_dist.weights, self.variance_grad)]
+            new_weights = self.proposal_dist.weights * self.variance_grad
             norm = sum(new_weights)
-            new_weights = [weight/norm for weight in new_weights]
+            new_weights = new_weights / norm
             self.proposal_dist.weights = new_weights
             
             #reset
-            self.variance_grad = [proposal.pdf(current)/self.proposal_dist.pdf(current) * weight**2 for proposal in self.proposal_dist.proposals]
+            for i, proposal in enumerate(self.proposal_dist.proposals):
+                self.variance_grad[i] = proposal.pdf(current)/self.proposal_dist.pdf(current) * weight**2

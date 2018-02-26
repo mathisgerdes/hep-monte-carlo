@@ -89,7 +89,7 @@ class StaticHMC(MCMC):
             #return min(1, proposal_q_pdf*current_p_pdf / (current_q_pdf*proposal_p_pdf))
     
     def step(self, current_q, current_q_pdf):
-        proposal_q, proposal_q_pdf, proposal_p, proposal_p_pdf, current_p, current_p_pdf = self.proposal(current, current_pdf)
+        proposal_q, proposal_q_pdf, proposal_p, proposal_p_pdf, current_p, current_p_pdf = self.proposal(current_q, current_q_pdf)
         aprob = self.aprob(current_q_pdf, proposal_q_pdf, current_p_pdf, proposal_p_pdf)
         
         if aprob > np.random.uniform():

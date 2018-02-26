@@ -93,10 +93,12 @@ class StaticHMC(MCMC):
         aprob = self.aprob(current_q_pdf, proposal_q_pdf, current_p_pdf, proposal_p_pdf)
         
         if aprob > np.random.uniform():
-            return proposal_q, proposal_q_pdf, proposal_p, proposal_p_pdf
+            #return proposal_q, proposal_q_pdf, proposal_p, proposal_p_pdf
+            return proposal_q, proposal_q_pdf
         
         else:
-            return current_q, current_q_pdf, current_p, current_p_pdf
+            #return current_q, current_q_pdf, current_p, current_p_pdf
+            return current_q, current_q_pdf
         
     def sample(self, nsamples, start):
         samples = np.zeros([nsamples, self.ndim])

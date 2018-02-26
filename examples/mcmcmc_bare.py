@@ -19,8 +19,8 @@ def counted(fn):
 
 np.random.seed(1234)
 
-ndim = 1
-#ndim = 2
+#ndim = 1
+ndim = 2
 nsamples = 2000
 nburnin = 1000
 nadapt = 1000
@@ -75,7 +75,7 @@ n_target_calls = target_pdf.called
 
 n_accepted = 1
 for i in range(1, nsamples):
-    if samples[i] != samples[i-1]:
+    if (samples[i] != samples[i-1]).any():
         n_accepted += 1
 
 print('Total wallclock time: ', t_end-t_start, ' seconds')

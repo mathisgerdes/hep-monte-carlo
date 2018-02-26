@@ -32,10 +32,7 @@ def metropolis_adapt_schedule(t):
 target = Camel()
 target_pdf = counted(target.pdf)
 
-if ndim == 1:
-    start = 0.5
-else:
-    start = np.full(ndim, 0.5)
+start = np.full(ndim, 0.5)
 
 metropolis_proposal = Gaussian(mu=ndim*[0.5], cov=0.005)
 metropolis_sampler = AdaptiveMetropolis(ndim, target_pdf, metropolis_proposal, t_initial=100, adapt_schedule=metropolis_adapt_schedule)
@@ -53,7 +50,7 @@ n_target_calls = target_pdf.called
 
 n_accepted = 1
 for i in range(1, nsamples):
-    if samples[i] != samples[i-1]:
+    if (samples[i] != samples[i-1]).any():
         n_accepted += 1
 
 print('Total wallclock time: ', t_end-t_start, ' seconds')

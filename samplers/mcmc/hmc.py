@@ -99,7 +99,7 @@ class StaticHMC(MCMC):
             return current_q, current_q_pdf, current_p, current_p_pdf
         
     def sample(self, nsamples, start):
-        samples = []
+        samples = np.zeros([nsamples, self.ndim])
         current_q = start
         current_q_pdf = self.target_pdf(start)
         for t in range(1, nsamples+1):
@@ -107,11 +107,11 @@ class StaticHMC(MCMC):
             aprob = self.aprob(current_q_pdf, proposal_q_pdf, current_p_pdf, proposal_p_pdf)
             
             if aprob > np.random.uniform():
-                samples.append(proposal_q)
+                samples[t-1] = proposal_q
                 current_q = proposal_q
                 current_q_pdf = proposal_q_pdf
             else:
-                samples.append(current_q)
+                samples[t-1] = current_q
             
             # try to adapt if sampler is adaptive
             if self.is_adaptive:

@@ -16,18 +16,19 @@ class StaticMetropolis(MCMC):
         return proposal, proposal_pdf
     
     def sample(self, nsamples, start):
-        samples = [start]
+        samples = np.zeros([nsamples, self.ndim])
+        current = start
         current_pdf = self.target_pdf(start)
         for t in range(1, nsamples+1):
-            current = samples[-1]
             proposal, proposal_pdf = self.proposal(current, current_pdf)
             aprob = self.aprob(current, current_pdf, proposal, proposal_pdf)
             
             if aprob > np.random.uniform():
-                samples.append(proposal)
+                samples[t-1] = proposal
+                current = proposal
                 current_pdf = proposal_pdf
             else:
-                samples.append(current)
+                samples[t-1] = current
             
             # try to adapt if sampler is adaptive
             if self.is_adaptive:
@@ -36,7 +37,7 @@ class StaticMetropolis(MCMC):
             if t%1000 == 0:
                 print('passed: ', t, 'samples')
         
-        return samples[1:]
+        return samples
 
 class AdaptiveMetropolis(StaticMetropolis):
     """

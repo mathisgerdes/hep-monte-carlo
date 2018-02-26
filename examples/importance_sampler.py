@@ -17,12 +17,14 @@ def counted(fn):
 
 np.random.seed(1234)
 
-ndim = 1
-#ndim = 2
+#ndim = 1
+ndim = 2
 nsamples = 2000
 
 target = Camel()
 target_pdf = counted(target.pdf)
+
+start = np.full(ndim, 0.5)
 
 is_proposal_dists = [Gaussian(mu=ndim*[1/3], cov=0.005), Gaussian(mu=ndim*[2/3], cov=0.005)]
 is_proposal_weights = [0.5, 0.5]
@@ -30,14 +32,14 @@ importance_sampler =  StaticMultiChannelImportanceSampler(ndim, target_pdf, is_p
 
 start = np.full(ndim, 0.5)
 t_start = timer()
-samples = importance_sampler.sample(nsamples, ndim*[0.5])
+samples = importance_sampler.sample(nsamples, start)
 t_end = timer()
 
 n_target_calls = target_pdf.called
 
 n_accepted = 1
 for i in range(1, nsamples):
-    if samples[i] != samples[i-1]:
+    if (samples[i] != samples[i-1]).any():
         n_accepted += 1
 
 print('Total wallclock time: ', t_end-t_start, ' seconds')

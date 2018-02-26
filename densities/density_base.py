@@ -1,7 +1,7 @@
 from numpy import log, inf, seterr
 #seterr(all='warn')
 import warnings
-warnings.filterwarnings('error')
+#warnings.filterwarnings('error')
 
 class Density(object):
     def pdf(self, x):

@@ -19,5 +19,8 @@ class Sampler(object):
             # try to adapt if sampler is adaptive
             if self.is_adaptive:
                 self.adapt(t, current=value, current_pdf=pdf, previous=samples[-1], previous_pdf=previous_pdf)
+            
+            if t%1000 == 0:
+                print('passed: ', t, 'samples')
         
         return samples[1:]

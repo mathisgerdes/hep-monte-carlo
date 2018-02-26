@@ -116,6 +116,9 @@ class StaticHMC(MCMC):
             # try to adapt if sampler is adaptive
             if self.is_adaptive:
                 self.adapt(t, current_q, current_q_pdf, aprob)
+            
+            if t%1000 == 0:
+                print('passed: ', t, 'samples')
         
         return samples
 

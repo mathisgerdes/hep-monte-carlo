@@ -89,17 +89,19 @@ class StaticHMC(MCMC):
             #return min(1, proposal_q_pdf*current_p_pdf / (current_q_pdf*proposal_p_pdf))
     
     def step(self, current_q, current_q_pdf):
-        proposal_q, proposal_q_pdf, proposal_p, proposal_p_pdf, current_p, current_p_pdf = self.proposal(current, current_pdf)
+        proposal_q, proposal_q_pdf, proposal_p, proposal_p_pdf, current_p, current_p_pdf = self.proposal(current_q, current_q_pdf)
         aprob = self.aprob(current_q_pdf, proposal_q_pdf, current_p_pdf, proposal_p_pdf)
         
         if aprob > np.random.uniform():
-            return proposal_q, proposal_q_pdf, proposal_p, proposal_p_pdf
+            #return proposal_q, proposal_q_pdf, proposal_p, proposal_p_pdf
+            return proposal_q, proposal_q_pdf
         
         else:
-            return current_q, current_q_pdf, current_p, current_p_pdf
+            #return current_q, current_q_pdf, current_p, current_p_pdf
+            return current_q, current_q_pdf
         
     def sample(self, nsamples, start):
-        samples = []
+        samples = np.zeros([nsamples, self.ndim])
         current_q = start
         current_q_pdf = self.target_pdf(start)
         for t in range(1, nsamples+1):
@@ -107,15 +109,18 @@ class StaticHMC(MCMC):
             aprob = self.aprob(current_q_pdf, proposal_q_pdf, current_p_pdf, proposal_p_pdf)
             
             if aprob > np.random.uniform():
-                samples.append(proposal_q)
+                samples[t-1] = proposal_q
                 current_q = proposal_q
                 current_q_pdf = proposal_q_pdf
             else:
-                samples.append(current_q)
+                samples[t-1] = current_q
             
             # try to adapt if sampler is adaptive
             if self.is_adaptive:
                 self.adapt(t, current_q, current_q_pdf, aprob)
+            
+            if t%1000 == 0:
+                print('passed: ', t, 'samples')
         
         return samples
 

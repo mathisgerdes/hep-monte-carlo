@@ -9,6 +9,7 @@ from plotting.plot_1d import plot_1d
 from plotting.plot_2d import plot_2d
 import numpy as np
 from timeit import default_timer as timer
+from statistics.print_statistics import print_statistics
 
 # decorator to count calls to target function
 def counted(fn):
@@ -21,8 +22,8 @@ def counted(fn):
 
 np.random.seed(1234)
 
-ndim = 1
-#ndim = 2
+#ndim = 1
+ndim = 2
 
 nsamples = 2000
 ntrain = 1000
@@ -58,7 +59,7 @@ importance_sampler.sample(nburnin, start)
 importance_sampler.is_adaptive = False
 
 # generate training samples
-train_samples = importance_sampler.sample(ntrain, start)
+train_samples, _, _ = importance_sampler.sample(ntrain, start)
 
 # train the surrogate
 surrogate = KernelExpLiteGaussianSurrogate(ndim=ndim, sigma=0.5, lmbda=0.0001, N=ntrain)
@@ -73,21 +74,12 @@ sampler = MixedSampler([hmc_sampler, importance_sampler], sampler_weights)
 
 target_pdf.called = 0
 t_start = timer()
-samples = sampler.sample(nsamples, start)
+samples, mean, variance = sampler.sample(nsamples, start)
 t_end = timer()
 
 n_target_calls = target_pdf.called
 
-n_accepted = 1
-for i in range(1, nsamples):
-    if (samples[i] != samples[i-1]).any():
-        n_accepted += 1
-
-print('Total wallclock time: ', t_end-t_start, ' seconds')
-print('Average time per sample: ', (t_end-t_start)/nsamples, ' seconds')
-print('Number of accepted points: ', n_accepted)
-print('Number of target calls: ', n_target_calls)
-print('Sampling probability: ', n_accepted/n_target_calls)
+print_statistics(samples, mean, variance, exp_mean=0.5, exp_var=0.0331, exp_var_var=0.000609, runtime=t_end-t_start, n_target_calls=n_target_calls)
 
 if ndim == 1:
     plot_1d(samples, target.pdf, mapping_pdf=importance_sampler.proposal_dist.pdf, target_log_pdf_gradient=target.log_pdf_gradient, surrogate_log_pdf_gradient=surrogate.log_pdf_gradient)

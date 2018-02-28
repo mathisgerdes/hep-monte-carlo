@@ -1,4 +1,5 @@
 import numpy as np
+from statistics.variance import online_variance
 
 class Sampler(object):
     def __init__(self, ndim, target_pdf, is_adaptive):
@@ -11,6 +12,7 @@ class Sampler(object):
 
     def sample(self, nsamples, start):
         samples = np.zeros([nsamples, self.ndim])
+        sample_variance = online_variance()
         current = start
         current_pdf = self.target_pdf(start)
         for t in range(1, nsamples+1):
@@ -18,6 +20,7 @@ class Sampler(object):
             previous_pdf = current_pdf
             current, current_pdf = self.step(previous, previous_pdf)
             samples[t-1] = current
+            sample_variance.add_variable(current)
             
             # try to adapt if sampler is adaptive
             if self.is_adaptive:
@@ -26,4 +29,4 @@ class Sampler(object):
             if t%1000 == 0:
                 print('passed: ', t, 'samples')
         
-        return samples
+        return samples, sample_variance.get_mean(), sample_variance.get_variance()

@@ -1,5 +1,6 @@
 from samplers.mcmc.mcmc_base import MCMC
 import numpy as np
+from statistics.variance import online_variance
 
 class StaticMetropolis(MCMC):
     """
@@ -17,6 +18,7 @@ class StaticMetropolis(MCMC):
     
     def sample(self, nsamples, start):
         samples = np.zeros([nsamples, self.ndim])
+        sample_variance = online_variance()
         current = start
         current_pdf = self.target_pdf(start)
         for t in range(1, nsamples+1):
@@ -25,10 +27,12 @@ class StaticMetropolis(MCMC):
             
             if aprob > np.random.uniform():
                 samples[t-1] = proposal
+                sample_variance.add_variable(current)
                 current = proposal
                 current_pdf = proposal_pdf
             else:
                 samples[t-1] = current
+                sample_variance.add_variable(current)
             
             # try to adapt if sampler is adaptive
             if self.is_adaptive:
@@ -37,7 +41,7 @@ class StaticMetropolis(MCMC):
             if t%1000 == 0:
                 print('passed: ', t, 'samples')
         
-        return samples
+        return samples, sample_variance.get_mean(), sample_variance.get_variance()
 
 class AdaptiveMetropolis(StaticMetropolis):
     """

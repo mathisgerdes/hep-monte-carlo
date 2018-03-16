@@ -219,7 +219,7 @@ class MonteCarloStratified(object):
             number of function evaluations might be lower than N.
         """
         def interface(f, N):
-            return self(f, N // self.volumes.totalN)
+            return self(f, N / self.volumes.totalN)
         interface.method_name = self.method_name
 
         return interface

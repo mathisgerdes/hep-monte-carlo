@@ -221,7 +221,10 @@ class GridVolumes(object):
         lower = np.empty(self.dim)
         upper = np.empty(self.dim)
         for index in np.ndindex(*[len(b)-1 for b in self.bounds]):
-            N = multiple * (self.Ns[index] if index in self.Ns else self.otherNs)
+            if index in self.Ns:
+                N = int(multiple * self.Ns[index])
+            else:
+                N = int(multiple * self.otherNs)
             for d in range(self.dim):
                 lower[d] = self.bounds[d][index[d]]
                 upper[d] = self.bounds[d][index[d]+1]

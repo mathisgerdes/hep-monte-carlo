@@ -201,13 +201,17 @@ class GridVolumes(object):
         self.otherNs = otherNs
         self.dim = dim
         self.totalN = sum(Ns.values()) + (divisions**dim - len(Ns)) * otherNs
-        self.bounds = bounds
         if bounds is None:
             self.bounds = [np.linspace(0, 1, divisions+1) for i in range(dim)]
             self.dim = dim
         else:
-            self.bounds = [np.array(b) for b in self.bounds]
+            self.bounds = [np.array(b) for b in bounds]
             self.dim = len(bounds)
+        # allow bounds to be modified and later reset
+        self.initial_bounds = self.bounds
+
+    def reset(self):
+        self.bounds = self.initial_bounds
 
     def plot_pdf(self, label="sampling weights"):
         # visualization of 1d volumes
@@ -216,6 +220,32 @@ class GridVolumes(object):
                   for N,_,vol in self.iterate()] # bar height corresponds to pdf
         width = self.bounds[0][1:] - self.bounds[0][:-1]
         plt.bar(self.bounds[0][:-1], height, width, align='edge', alpha=.4, label=label)
+
+    def update_bounds_from_sizes(self, sizes):
+        for d in range(self.dim):
+            self.bounds[d][1:] = np.cumsum(sizes[d])
+
+    def random_bins(self, N):
+        """ Return the indices of N randomly chosen bins.
+
+        Returns:
+            array of shape dim x N of bin indices.
+        """
+        indices = np.empty((self.dim, N), dtype=np.int)
+        for d in range(self.dim):
+            indices[d] = np.random.randint(0, self.bounds[d].size-1, N)
+
+        return indices
+
+    def sample(self, indices):
+        """ Note this returns a transposed samples array. """
+        N = indices.shape[1]
+        samples = np.empty((self.dim, N))
+        for d in range(self.dim):
+            lower = self.bounds[d][indices[d]]
+            upper = self.bounds[d][indices[d]+1]
+            samples[d] = lower + (upper - lower) * np.random.rand(N)
+        return samples
 
     def iterate(self, multiple=1):
         lower = np.empty(self.dim)

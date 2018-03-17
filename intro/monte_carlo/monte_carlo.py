@@ -237,86 +237,88 @@ class MonteCarloStratified(object):
 class MonteCarloVEGAS(object):
     def __init__(self, Nj=100, dim=1, divisions=1, c=3, name="MC VEGAS"):
         """
-        c: each iteration, the bin sizes are a combination of old and new bin sizes.
+        c: each iteration, the bin sizes are set to a combination of old and updated bin sizes.
             the weight of the old bin sizes increases with the number of iterations.
             c gives the iteration where both have equal weight (=1 -> equal in first iteration).
             therefore: larger c means the bins change more, smaller means the bins tend to stay close to uniform.
         """
-        self.dim = dim
         self.sizes = np.ones((dim, divisions))/divisions  # the configuration is defined by the sizes of the bins
+        self.dim = dim
+        self.volumes = GridVolumes(dim=dim, divisions=divisions)
         self.Nj = Nj  # number of samples per iteration
         self.divisions = divisions  # number of bins along each axis
         self.c = c  # measure of damping (smaller means more damping)
         self.method_name = name
 
+    def get_interface_infer_multiple(self, Nj):
+        def interface(f, N, apriori=True, xhi=False):
+            # inevitably do fewer evaluations for some N
+            iterations = N // Nj
+            return self(f, Nj, iterations, apriori=apriori, xhi=xhi)
+        interface.method_name = self.method_name
+        return interface
+
     def choice(self):
         """ Return a random choice of bin, specified by its multi-index. """
         return np.random.randint(0, self.divisions, self.dim)
 
-    def random_x(self, bin_index):
-        """ Return a random number in the bin of given multi-index. """
-        x = np.empty(self.dim)
-        for i in range(self.dim):
-            x[i] = np.sum(self.sizes[i][:bin_index[i]])
-        x += self.sizes[np.arange(self.dim), bin_index] * np.random.rand(self.dim)
-        return x
-
-    def pdf(self, bin_index):
-        """ Give the probability density of finding a point in bin with given index. """
-        # 1 / volume
-        return 1/np.power(self.divisions, self.dim) / np.prod(self.sizes[np.arange(self.dim), bin_index])
+    def pdf(self, indices):
+        """ Probability density of finding a point in bin with given index. """
+        # since here N = 1 = const for all bins, the pdf is given simply by the volume
+        vol = np.prod([self.sizes[d][indices[d]] for d in range(self.dim)], axis=0)
+        return 1 / self.divisions**self.dim / vol
 
     def plot_pdf(self):
         """ Plot the pdf resulting from the current bin sizes. """
-        assert self.dim == 1, "Can only plot 1D pdf"
-        xs = []
-        ys = []
-        x = 0
-        for i, size in zip(range(self.divisions), self.sizes[0]):
-            xs.append(x)
-            y = 1/self.divisions/size
-            ys.append(y)
-            x += size
-            xs.append(x)
-            ys.append(y)
-        plt.plot(xs, ys, label="VEGAS pdf")
+        self.volumes.plot_pdf(label="VEGAS pdf")
 
-    def __call__(self, f, N, apriori=True, xhi=False):
+    def __call__(self, f, Nj, iterations, apriori=True, xhi=False):
+        """
+        Args:
+            Nj: Number of function evaluations in each iteration.
+            iterations: Number of iterations.
+            xhi: Indicate whether xhi^2 over the estimates of the
+                iterations should be computed. Can only do this
+                if iterations >= 2.
+
+        Returns:
+            if xhi is true:
+            (estimate, statistical error of estimate, xhi^2)
+            if xhi is false:
+            (estimate, statistical error of estimate)
+        """
         if apriori:
             # start anew
-            self.sizes = np.ones((self.dim, self.divisions))/self.divisions
+            self.volumes.reset()
 
-        assert N >= self.Nj, "N must be at least Nj (default 100) initially set."
+        assert not xhi or iterations > 1, "Can only compute xhi^2 if there is more than one iteration"
 
-        Nj = self.Nj
-        m = N // Nj       # number of iterations (the true N is smaller or equal the passed N parameter!)
-        Ej = np.zeros(m)  # The estimate in each iteration j
-        Sj = np.zeros(m)  # sample variance in each iteration j, estimating the variance of Ej
+        Ej = np.zeros(iterations)  # The estimate in each iteration j
+        Sj = np.zeros(iterations)  # sample estimate of the variance of Ej
+        # keep track of contributions of each marginalized bin to the estimate
+        Ei = np.zeros((self.dim, self.divisions))
 
-        for j in range(m):
-            Ei = np.zeros((self.dim, self.divisions))
-            Ni = np.zeros((self.dim, self.divisions))  # keep track of number of samples in each "projected" bin
-            for i in range(Nj):
-                bin_index = self.choice()
-                x = self.random_x(bin_index)
-                f_sample = f(x) / self.pdf(bin_index)
-                Ej[j] +=  f_sample / Nj
-                Sj[j] += (f_sample)**2 / Nj
-                # in each dimension add the contribution to the given bin index (so in total add in self.dim places)
-                Ei[np.arange(self.dim), bin_index] += f_sample / Nj
+        for j in range(iterations):
+            indices = self.volumes.random_bins(Nj)
+            samples_t = self.volumes.sample(indices)
+            values = f(*samples_t) / self.pdf(indices)
+            for div in range(self.divisions):
+                Ei[:, div] = np.mean(values * (indices == div), axis=1)
+            Ej[j] = np.mean(values)
+            Sj[j] = np.var(values)/Nj
 
             # new size = 1/(old value * (getting larger with j) + best guess new * (getting smaller with j))
             self.sizes = 1/damped_update(Ej[j]/self.sizes, self.divisions * Ei, self.c, j)
             self.sizes = self.sizes / np.add.reduce(self.sizes, axis=1)[:, np.newaxis] # normalize
+            self.volumes.update_bounds_from_sizes(self.sizes)
 
-        Sj -= Ej**2             # at this point Sj is the sample variance of f/pdf
-        Sj = Sj / Nj            # this completes the computation of Sj (estimated variance of Ej)
-
+        # note: weighting with Nj here is redundant,
+        # but illustrates how this algorithm could be expanded
         C = np.sum(Nj/Sj)       # normalization factor
         E = np.sum(Nj*Ej/Sj)/C  # final estimate of e: weight by Nj and Sj (note: could modify to make Nj vary with j)
         if xhi:
-            # xhi^2/dof, have m values that are combined so here dof = m - 1
-            xhi2 = np.sum((Ej - E)**2/Sj)/(m-1)
+            # xhi^2/dof, have "iteration" values that are combined so here dof = iterations - 1
+            xhi2 = np.sum((Ej - E)**2/Sj)/(iterations-1)
             return E, np.sqrt(np.sum(Nj**2/Sj)/C**2), xhi2
         else:
             return E, np.sqrt(np.sum(Nj**2/Sj)/C**2)
@@ -359,7 +361,7 @@ class MC3(object):
         if batch_size is None:
             batch_size = int((1 - beta) * N_sample / 10)
 
-        self.integral, self.integral_var = self.mc_importance(fn, *Ns_integration)
+        self.integral, self.integral_var = self.mc_importance(self.fn, *Ns_integration)
 
         sample = np.empty((N_sample, self.dim))
         for i in range(N_sample):

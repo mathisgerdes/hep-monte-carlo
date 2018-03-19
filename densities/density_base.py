@@ -8,7 +8,7 @@ class Density(object):
         raise NotImplementedError()
     
     def log_pdf(self, x):
-        return log(self.pdf(x))
+        return -log(self.pdf(x))
     
     def pdf_gradient(self, x):
         raise NotImplementedError()
@@ -21,7 +21,7 @@ class Density(object):
             
         if pdf != 0.:
             try:
-                return self.pdf_gradient(x) / pdf
+                return -self.pdf_gradient(x) / pdf
             except RuntimeWarning:
                 return inf
         else:

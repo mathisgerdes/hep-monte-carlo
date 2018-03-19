@@ -8,7 +8,7 @@ def effective_sample_size(samples, mean, var):
     for dim in range(ndim):
         lag = 1
         rho = autocorr(samples[:, dim], mean, var, lag)
-        while rho >= 0.05:
+        while rho >= 0.05 and lag < nsamples-1:
             sum[dim] = sum[dim] + (1-lag/nsamples)*rho
             lag = lag + 1
             rho = autocorr(samples[:, dim], mean, var, lag)

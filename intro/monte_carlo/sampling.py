@@ -127,14 +127,14 @@ class Channels(object):
 
         self.count = len(sampling_channels)
         self.cweights = np.ones(self.count)/self.count if cweights is None else cweights
-        self.init_cweights = self.cweights
+        self.init_cweights = np.copy(self.cweights)
         self.sampling_channels = sampling_channels
         self.channel_pdfs = channel_pdfs
 
         self.Ni = np.zeros(self.count)  # hold sample_count
 
     def reset(self):
-        self.cweights = self.init_cweights
+        self.cweights = np.copy(self.init_cweights)
 
     def pdf(self, *x):
         p = 0
@@ -208,10 +208,10 @@ class GridVolumes(object):
             self.bounds = [np.array(b) for b in bounds]
             self.dim = len(bounds)
         # allow bounds to be modified and later reset
-        self.initial_bounds = self.bounds
+        self.initial_bounds = [np.copy(b) for b in self.bounds]
 
     def reset(self):
-        self.bounds = self.initial_bounds
+        self.bounds = [np.copy(b) for b in self.initial_bounds]
 
     def plot_pdf(self, label="sampling weights"):
         # visualization of 1d volumes

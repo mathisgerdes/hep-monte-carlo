@@ -289,7 +289,8 @@ class MonteCarloVEGAS(object):
         """
         if apriori:
             # start anew
-            self.volumes.reset()
+            self.sizes = np.ones((self.dim, self.divisions))/divisions
+            self.volumes.update_bounds_from_sizes(self.sizes)
 
         assert not xhi or iterations > 1, "Can only compute xhi^2 if there is more than one iteration"
 

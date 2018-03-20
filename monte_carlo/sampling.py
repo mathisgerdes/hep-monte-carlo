@@ -10,7 +10,7 @@ def assure_2d(array):
         raise RuntimeError("Array must be 1 or 2 dimensional.")
 
 # ACCEPTION REJECTION
-class AcceptionRejection(object):
+class AcceptReject(object):
     # for use in monte carlo it will be useful to have a parameter-less sample function,
     # therefore use a callable object
     def __init__(self, p, C, dim=1, sample_pdf=lambda *x: 1, sample_generator=None):

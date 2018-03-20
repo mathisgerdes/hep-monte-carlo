@@ -289,7 +289,7 @@ class MonteCarloVEGAS(object):
         """
         if apriori:
             # start anew
-            self.sizes = np.ones((self.dim, self.divisions))/divisions
+            self.sizes = np.ones((self.dim, self.divisions))/self.divisions
             self.volumes.update_bounds_from_sizes(self.sizes)
 
         assert not chi or iterations > 1, "Can only compute chi^2 if there is more than one iteration"

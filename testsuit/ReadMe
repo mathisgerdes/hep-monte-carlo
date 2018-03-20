@@ -1,0 +1,17 @@
+1. grauenhaftestScriptZumErstellenVonSamples.py
+    soll über wariable parameter der generatoren loopen und sample erstellen
+    - loopt momentan nur über beta
+
+2. startTesting.py
+    - führt chi2 und ks test für erstellte sample aus
+    - variiert dabei selbst das lag des generator
+    - plottet ergebnisse in abhängigkeit von zwei generator variablen
+    
+    - input:
+        sample müssen in einem Ordner liege
+          Namensstruktur: GesampelteVerteilung_nsamples_generator-var1_value1-var2_value2.npy
+          Filestruktur: python dictionary das unter den namen "sample" ein 2d array mit dem sample hat
+                        - muss mit numpy.save("filename",dictionary) gespeichtert werden  
+        
+        im script selbst muss der pfad zum ordner mit den samples, der pfad zum referens sample, sowie das gewünschte bining für die
+        diskretisierung und das maximale lag das angewendert werden soll, eingegeben werden

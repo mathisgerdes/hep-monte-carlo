@@ -251,10 +251,10 @@ class MonteCarloVEGAS(object):
         self.method_name = name
 
     def get_interface_infer_multiple(self, Nj):
-        def interface(f, N, apriori=True, xhi=False):
+        def interface(f, N, apriori=True, chi=False):
             # inevitably do fewer evaluations for some N
             iterations = N // Nj
-            return self(f, Nj, iterations, apriori=apriori, xhi=xhi)
+            return self(f, Nj, iterations, apriori=apriori, chi=chi)
         interface.method_name = self.method_name
         return interface
 
@@ -272,19 +272,19 @@ class MonteCarloVEGAS(object):
         """ Plot the pdf resulting from the current bin sizes. """
         self.volumes.plot_pdf(label="VEGAS pdf")
 
-    def __call__(self, f, Nj, iterations, apriori=True, xhi=False):
+    def __call__(self, f, Nj, iterations, apriori=True, chi=False):
         """
         Args:
             Nj: Number of function evaluations in each iteration.
             iterations: Number of iterations.
-            xhi: Indicate whether xhi^2 over the estimates of the
+            chi: Indicate whether chi^2 over the estimates of the
                 iterations should be computed. Can only do this
                 if iterations >= 2.
 
         Returns:
-            if xhi is true:
-            (estimate, statistical error of estimate, xhi^2)
-            if xhi is false:
+            if chi is true:
+            (estimate, statistical error of estimate, chi^2)
+            if chi is false:
             (estimate, statistical error of estimate)
         """
         if apriori:
@@ -292,7 +292,7 @@ class MonteCarloVEGAS(object):
             self.sizes = np.ones((self.dim, self.divisions))/divisions
             self.volumes.update_bounds_from_sizes(self.sizes)
 
-        assert not xhi or iterations > 1, "Can only compute xhi^2 if there is more than one iteration"
+        assert not chi or iterations > 1, "Can only compute chi^2 if there is more than one iteration"
 
         Ej = np.zeros(iterations)  # The estimate in each iteration j
         Sj = np.zeros(iterations)  # sample estimate of the variance of Ej
@@ -317,10 +317,10 @@ class MonteCarloVEGAS(object):
         # but illustrates how this algorithm could be expanded
         C = np.sum(Nj/Sj)       # normalization factor
         E = np.sum(Nj*Ej/Sj)/C  # final estimate of e: weight by Nj and Sj (note: could modify to make Nj vary with j)
-        if xhi:
-            # xhi^2/dof, have "iteration" values that are combined so here dof = iterations - 1
-            xhi2 = np.sum((Ej - E)**2/Sj)/(iterations-1)
-            return E, np.sqrt(np.sum(Nj**2/Sj)/C**2), xhi2
+        if chi:
+            # chi^2/dof, have "iteration" values that are combined so here dof = iterations - 1
+            chi2 = np.sum((Ej - E)**2/Sj)/(iterations-1)
+            return E, np.sqrt(np.sum(Nj**2/Sj)/C**2), chi2
         else:
             return E, np.sqrt(np.sum(Nj**2/Sj)/C**2)
 

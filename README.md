@@ -1,7 +1,9 @@
 # Introduction to Monte Carlo Integration
 
-In `monte_carlo/` are a number of Monte Carlo Methods. For an introduction
-to Monte Carlo methods see the `monte_carlo.ipynb` notebook.
+The implementations of the sampling and integration algorithms are
+located in `monte_carlo/`. For an introduction to the Monte Carlo
+methods and details on the implementations provided here see the
+`monte_carlo.ipynb` jupyter notebook.
 
 Some examples on Markov Chains and related statistics can be found in
 `markov_chains.ipynb`.

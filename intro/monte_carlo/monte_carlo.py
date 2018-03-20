@@ -235,7 +235,7 @@ class MonteCarloStratified(object):
 
 # VEGAS
 class MonteCarloVEGAS(object):
-    def __init__(self, Nj=100, dim=1, divisions=1, c=3, name="MC VEGAS"):
+    def __init__(self, Nj=100, dim=1, divisions=1, c=3, name="MC VEGAS", var_weighted=False):
         """
         c: each iteration, the bin sizes are set to a combination of old and updated bin sizes.
             the weight of the old bin sizes increases with the number of iterations.
@@ -248,6 +248,7 @@ class MonteCarloVEGAS(object):
         self.Nj = Nj  # number of samples per iteration
         self.divisions = divisions  # number of bins along each axis
         self.c = c  # measure of damping (smaller means more damping)
+        self.var_weighted = var_weighted
         self.method_name = name
 
     def get_interface_infer_multiple(self, Nj):
@@ -315,14 +316,21 @@ class MonteCarloVEGAS(object):
 
         # note: weighting with Nj here is redundant,
         # but illustrates how this algorithm could be expanded
-        C = np.sum(Nj/Sj)       # normalization factor
-        E = np.sum(Nj*Ej/Sj)/C  # final estimate of e: weight by Nj and Sj (note: could modify to make Nj vary with j)
+
+        if self.var_weighted:
+            C = np.sum(Nj/Sj)       # normalization factor
+            E = np.sum(Nj*Ej/Sj)/C  # final estimate of e: weight by Nj and Sj (note: could modify to make Nj vary with j)
+            var = np.sum(Nj**2/Sj)/C**2
+        else:
+            E = np.sum(Nj*Ej) / (iterations * Nj)
+            var = np.sum(Nj**2 * Sj) / (iterations * Nj)**2
+
         if chi:
             # chi^2/dof, have "iteration" values that are combined so here dof = iterations - 1
             chi2 = np.sum((Ej - E)**2/Sj)/(iterations-1)
-            return E, np.sqrt(np.sum(Nj**2/Sj)/C**2), chi2
+            return E, np.sqrt(var), chi2
         else:
-            return E, np.sqrt(np.sum(Nj**2/Sj)/C**2)
+            return E, np.sqrt(var)
 
 
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)

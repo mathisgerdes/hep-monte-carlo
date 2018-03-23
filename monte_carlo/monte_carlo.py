@@ -191,9 +191,8 @@ class MonteCarloMultiImportance(object):
             E = np.sum(Ns * Es / variances) / norm
             var = np.sum(Ns**2 / variances) / norm**2
         else:
-            norm = np.sum(np.sqrt(Ns))
             N = np.sum(Ns)
-            E = np.sum(Es * np.sqrt(Ns)) / norm
+            E = np.sum(Es * Ns) / N
             var = (np.sum(Ns * Ws / N) - E**2) / N
 
         return E, np.sqrt(var)

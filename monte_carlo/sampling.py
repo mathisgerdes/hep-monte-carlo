@@ -181,6 +181,7 @@ class Channels(object):
 
     def update_sample_cweights(self, new_cweights):
         """ Update channels at self.sample_channel_indices with given values. """
+        self.cweights.fill(0)
         self.cweights[self.sample_channel_indices] = new_cweights
 
 

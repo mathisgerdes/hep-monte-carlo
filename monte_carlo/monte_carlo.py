@@ -331,7 +331,6 @@ class MonteCarloVEGAS(object):
         else:
             return E, np.sqrt(var)
 
-
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)
 class MC3(object):
     def __init__(self, dim, channels, fn, delta=None, initial_value=np.random.rand()):
@@ -365,12 +364,11 @@ class MC3(object):
         one = np.ones(self.dim)
         return np.minimum(np.maximum(zero, state-self.delta/2), one-self.delta) + np.random.rand()*self.delta
 
-    def __call__(self, Ns_integration, N_sample, beta, batch_size=None):
-        if batch_size is None:
-            batch_size = int((1 - beta) * N_sample / 10)
-
+    def integrate(self, Ns_integration):
         self.integral, self.integral_var = self.mc_importance(self.fn, *Ns_integration)
+        return self.integral, self.integral_var
 
+    def sample(self, N_sample, beta):
         sample = np.empty((N_sample, self.dim))
         for i in range(N_sample):
             if np.random.rand() <= beta:
@@ -379,3 +377,7 @@ class MC3(object):
                 self.sample_IS.state = sample[i] = self.sample_METROPOLIS(1)
 
         return sample
+
+    def __call__(self, Ns_integration, N_sample, beta):
+        self.integrate(Ns_integration)
+        return self.sample(N_sample, beta)

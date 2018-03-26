@@ -142,10 +142,10 @@ class Channels(object):
             p += self.cweights[i] * self.channel_pdfs[i](*x)
         return p
 
-    def plot_pdf(self):
+    def plot_pdf(self, label="total pdf"):
         x = np.linspace(0, 1, 1000)
         y = [self.pdf(xi) for xi in x]
-        plt.plot(x, y, label="total pdf")
+        plt.plot(x, y, label=label)
 
     def sample(self, N, return_sizes=False):
         choice = np.random.rand(N)

@@ -5,8 +5,8 @@ located in `monte_carlo/`. For an introduction to the Monte Carlo
 methods and details on the implementations provided here see the
 `monte_carlo.ipynb` jupyter notebook.
 
-Some examples on Markov Chains and related statistics can be found in
-`markov_chains.ipynb`.
+The notebook `plots.ipynb` contains a few dense plots highlighting
+specific behaviors of Monte Carlo and Markov Chain techniques.
 
 ## Covered Algorithms
 

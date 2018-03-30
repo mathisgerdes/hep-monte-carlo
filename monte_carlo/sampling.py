@@ -40,62 +40,25 @@ class AcceptReject(object):
 
 
 # METROPOLIS MARKOV CHAINS
-class Metropolis(object):
-    def __init__(self, initial, pdf, dim=1, proposal_generator=None):
-        """
-        Note, here the proposal must not depend on the current state. Otherwise use
-        the Metropolis Hasting algorithm.
-        """
-        if proposal_generator is None:
-            proposal_generator = lambda s: np.random.rand(dim)
+class GenericMetropolis(object):
+    def __init__(self, initial, pdf, dim, proposal):
+        """ Generic Metropolis (Hasting) sampler
 
-        self.state = initial
-        self.pdf = pdf
-        self.dim = dim
-        self.proposal_generator = proposal_generator
-
-    def __call__(self, N=1, get_accept_rate=False):
-        chain = np.empty((N, self.dim))
-
-        if get_accept_rate:
-            accepted = 0
-
-        for i in range(N):
-            proposal = self.proposal_generator(self.state)
-            # hasting ratio
-            r = self.pdf(proposal)/self.pdf(self.state)
-            a = min(1, r)
-            if a == 1 or np.random.rand() < a:
-                self.state = chain[i] = proposal
-
-                if get_accept_rate:
-                    accepted += 1
-            else:
-                chain[i] = self.state
-
-        if get_accept_rate:
-            return chain, accepted / N
-        return chain
-
-
-class MetropolisHasting(object):
-    def __init__(self, initial, pdf, dim=1, proposal_pdf=None, proposal_generator=None):
-        """
-        Note, here the proposal must not depend on the current state. Otherwise use
-        the Metropolis Hasting algorithm.
+        Class is abstract, child class has to implement a function 'accept'.
+        Function, takes the previous and next state and retuns
+        the acceptance probability. (Values greater than 1 are treated as 1.)
 
         Args:
-            proposal_pdf: takes two dim-dimensional numpy arrays (state, candidate)
+            proposal: Function, returns a candidate state, given the state.
+            accept:
         """
-        if proposal_pdf is None or proposal_generator is None:
-            proposal_pdf = lambda state, candidate: 1
-            proposal_generator = lambda s: np.random.rand(dim)
-
         self.state = initial
         self.pdf = pdf
         self.dim = dim
-        self.proposal_pdf = proposal_pdf
-        self.proposal_generator = proposal_generator
+        self.proposal = proposal
+
+    def accept(self):
+        raise NotImplementedError("GenericMetropolis is abstract.")
 
     def __call__(self, N=1, get_accept_rate=False):
         chain = np.empty((N, self.dim))
@@ -104,13 +67,13 @@ class MetropolisHasting(object):
             accepted = 0
 
         for i in range(N):
-            proposal = self.proposal_generator(self.state)
-            # hasting ratio
-            r = self.pdf(proposal)*self.proposal_pdf(proposal, self.state)/self.pdf(self.state)/self.proposal_pdf(self.state, proposal)
-            a = min(1, r)
-            if a == 1 or np.random.rand() < a:
-                self.state = chain[i] = proposal
+            candidate = self.proposal(self.state)
+            accept_prob = self.accept(self.state, candidate)
+            if accept_prob >= 1 or np.random.rand() < accept_prob:
+                self.state = chain[i] = candidate
 
+                # The advantage of not checking in every integration is
+                # negligible. This way is cleaner as it avoids code duplication.
                 if get_accept_rate:
                     accepted += 1
             else:
@@ -119,6 +82,45 @@ class MetropolisHasting(object):
         if get_accept_rate:
             return chain, accepted / N
         return chain
+
+
+class Metropolis(GenericMetropolis):
+    def __init__(self, initial, pdf, dim=1, proposal=None):
+        """
+        Note, here the proposal must not depend on the current state. Otherwise use
+        the Metropolis Hasting algorithm.
+        """
+        if proposal is None:
+            # default to uniform proposal distribution
+            proposal = lambda s: np.random.rand(dim)
+
+        super().__init__(initial, pdf, dim, proposal)
+
+    def accept(self, state, candidate):
+        return self.pdf(candidate) / self.pdf(state)
+
+
+class MetropolisHasting(GenericMetropolis):
+    def __init__(self, initial, pdf, dim=1, proposal_pdf=None, proposal=None):
+        """ Metropolis Hasting sampler.
+
+        Args:
+            proposal_pdf: takes two dim-dimensional numpy arrays
+                (state, candidate), and returns the conditional propability
+                of the candidate given the state.
+        """
+        if proposal_pdf is None or proposal is None:
+            # default to uniform proposal distribution
+            proposal_pdf = lambda state, candidate: 1
+            proposal = lambda s: np.random.rand(dim)
+
+        self.proposal_pdf = proposal_pdf
+        super().__init__(initial, pdf, dim, proposal)
+
+    def accept(self, state, candidate):
+        return (self.pdf(candidate) * self.proposal_pdf(candidate, state) /
+                self.pdf(state)/self.proposal_pdf(state, candidate) )
+
 
 # CHANNELS for Monte Carlo Multi-Channel
 class Channels(object):

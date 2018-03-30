@@ -1,3 +1,6 @@
+from monte_carlo.sampling import *
+from monte_carlo.integration import *
+
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)
 class MC3(object):
     def __init__(self, dim, channels, fn, delta=None, initial_value=np.random.rand()):

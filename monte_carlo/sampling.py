@@ -1,7 +1,28 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def assure_2d(array):
+    """ Assure the vector is two dimensional.
+
+    Several of the sampling algorithms work with samples of shape (N, dim),
+    if dim is one it is, however, convenient to simply have the shape (N,).
+    This method adds an extra dimension if necessary to allow both shapes.
+
+    If the array has more than 2 dimensions, an exception is raised.
+
+    Example:
+        >>> x = np.array([0, 1, 2, 3])
+        >>> y = assure_2d(x)
+        >>> y.shape
+        (4, 1)
+        >>> y is assure_2d(y)  # y is already two dimensional
+        True
+
+    :param array: Numpy array, either one or two dimensional.
+    :return: If the original shape is (N,) the returned array has shape (N, 1).
+        For arrays with shape (N, dim) this function is the identity.
+    """
     if array.ndim == 2:
         return array
     elif array.ndim == 1:
@@ -9,31 +30,55 @@ def assure_2d(array):
     else:
         raise RuntimeError("Array must be 1 or 2 dimensional.")
 
-# ACCEPTION REJECTION
+
+# ACCEPTANCE REJECTION
 class AcceptReject(object):
-    # for use in monte carlo it will be useful to have a parameter-less sample function,
-    # therefore use a callable object
-    def __init__(self, p, C, dim=1, sample_pdf=lambda *x: 1, sample_generator=None):
+
+    def __init__(self, pdf, c, dim=1, sampling_pdf=lambda *x: 1, sampling=None):
+        """ Acceptance Rejection method for sampling a given pdf.
+
+        The method uses a known distribution and sampling method to propose
+        samples which are then accepted with the probability
+        pdf(x)/(c * sampling_pdf(x)), thus producing the desired distribution.
+
+        :param pdf: Unnormalized desired probability distribution of the current_sample.
+        :param c: Constant such that pdf(x) <= c * sampling_pdf(x) everywhere.
+        :param dim: Dimensionality of the current_sample points.
+            This must conform with sampling and sampling_pdf.
+        :param sampling_pdf: Returns the probability of sampling to generate
+            a given current_sample. Must accept dim arguments, each of some length N and
+            return an array of floats of length N.
+        :param sampling: Generate a given number of samples according to
+            sampling_pdf. The default is a uniform distribution. The algorithm
+            gets more efficient, the closer the sampling is to the desired
+            distribution pdf(x).
         """
-        Args:
-            p: Unnormalized (!) probability distribution function.
-            sample_pdf: Probability distribution of known sample_generator.
-        """
-        self.p = p
-        self.C = C
+        self.pdf = pdf
+        self.c = c
         self.dim = dim
-        self.sample_pdf = sample_pdf
-        if sample_generator is None:
-            sample_generator = lambda N: np.random.rand(N * self.dim).reshape(N, self.dim)
-        self.sample = sample_generator
+        self.sample_pdf = sampling_pdf
 
-    def __call__(self, N):
-        x = np.empty((N, self.dim))
+        if sampling is None:
+            def sampling(sample_size):
+                """ Generate a uniform current_sample. """
+                sample = np.random.rand(sample_size * self.dim)
+                return sample.reshape(sample_size, self.dim)
 
-        indices = np.arange(N)
+        self.sample = sampling
+
+    def __call__(self, sample_size):
+        """ Generate a current_sample according to self.pdf of given size.
+
+        :param sample_size: Number of samples
+        :return: Numpy array with shape (sample_size, self.dim).
+        """
+        x = np.empty((sample_size, self.dim))
+
+        indices = np.arange(sample_size)
         while indices.size > 0:
             proposal = assure_2d(self.sample(indices.size))
-            accept = np.random.rand(indices.size) * self.C * self.sample_pdf(*proposal.transpose()) <= self.p(*proposal.transpose())
+            accept = np.random.rand(indices.size) * self.c * self.sample_pdf(
+                *proposal.transpose()) <= self.pdf(*proposal.transpose())
             x[indices[accept]] = proposal[accept]
             indices = indices[np.logical_not(accept)]
         return x
@@ -42,31 +87,50 @@ class AcceptReject(object):
 # METROPOLIS MARKOV CHAINS
 class GenericMetropolis(object):
     def __init__(self, initial, pdf, dim, proposal):
-        """ Generic Metropolis (Hasting) sampler
+        """ Generic Metropolis (Hasting) sampler.
 
         Class is abstract, child class has to implement a function 'accept'.
-        Function, takes the previous and next state and retuns
+        Function, takes the previous and next state and returns
         the acceptance probability. (Values greater than 1 are treated as 1.)
 
-        Args:
-            proposal: Function, returns a candidate state, given the state.
-            accept:
+        :param initial: Initial value of the Markov chain.
+        :param pdf: Desired (unnormalized) probability distribution.
+        :param dim: Dimensionality of points in the current_sample.
+        :param proposal: A proposal generator (generate candidate points in
+            the current_sample space. These are used in the update mechanism and
+            accepted with a probability self.accept(candidate) that depends
+            on the used algorithm. Takes the previous state as argument.
         """
         self.state = initial
         self.pdf = pdf
         self.dim = dim
         self.proposal = proposal
 
-    def accept(self):
+    def accept(self, state, candidate):
+        """ This function must be implemented by child classes.
+
+        :param state: Previous state in the Markov chain.
+        :param candidate: Candidate for next state.
+        :return: The acceptance probability of a candidate state given the
+            previous state in the Markov chain.
+        """
         raise NotImplementedError("GenericMetropolis is abstract.")
 
-    def __call__(self, N=1, get_accept_rate=False):
-        chain = np.empty((N, self.dim))
+    def __call__(self, sample_size=1, get_accept_rate=False):
+        """ Generate a current_sample of given size.
 
-        if get_accept_rate:
-            accepted = 0
+        :param sample_size: Number of samples to generate.
+        :param get_accept_rate: If true, compute the acceptance rate.
+        :return: Numpy array with shape (sample_size, self.dim).
+            If get_accept_rate is true, return a tuple of the array and
+            the acceptance rate of the Metropolis algorithm in this run.
+        """
+        chain = np.empty((sample_size, self.dim))
 
-        for i in range(N):
+        # only used if get_accept_rate is true.
+        accepted = 0
+
+        for i in range(sample_size):
             candidate = self.proposal(self.state)
             accept_prob = self.accept(self.state, candidate)
             if accept_prob >= 1 or np.random.rand() < accept_prob:
@@ -80,23 +144,35 @@ class GenericMetropolis(object):
                 chain[i] = self.state
 
         if get_accept_rate:
-            return chain, accepted / N
+            return chain, accepted / sample_size
         return chain
 
 
 class Metropolis(GenericMetropolis):
     def __init__(self, initial, pdf, dim=1, proposal=None):
-        """
-        Note, here the proposal must not depend on the current state. Otherwise use
-        the Metropolis Hasting algorithm.
+        """ Use the Metropolis algorithm to generate a current_sample.
+
+        The proposal must not depend on the current state.
+        Use the Metropolis Hasting algorithm if it does.
+
+        :param initial: Initial value of the Markov chain.
+        :param pdf: Desired (unnormalized) probability distribution.
+        :param dim: Dimensionality of points in the current_sample.
+        :param proposal: A proposal generator.
+            Takes the previous state as argument, but for this algorithm
+            to work must not depend on it (argument exists only for generality
+            of the implementation.)
         """
         if proposal is None:
             # default to uniform proposal distribution
-            proposal = lambda s: np.random.rand(dim)
+            def proposal(_):
+                """ Generate a current_sample with uniform distribution. """
+                return np.random.rand(dim)
 
         super().__init__(initial, pdf, dim, proposal)
 
     def accept(self, state, candidate):
+        """ Probability of accepting candidate as next state. """
         return self.pdf(candidate) / self.pdf(state)
 
 
@@ -104,92 +180,220 @@ class MetropolisHasting(GenericMetropolis):
     def __init__(self, initial, pdf, dim=1, proposal_pdf=None, proposal=None):
         """ Metropolis Hasting sampler.
 
-        Args:
-            proposal_pdf: takes two dim-dimensional numpy arrays
-                (state, candidate), and returns the conditional propability
-                of the candidate given the state.
+        If proposal_pdf and proposal are not specified (None),
+        a uniform distribution is used. This makes the method equivalent to
+        the simpler Metropolis algorithm as the candidate distribution does
+        not depend on the previous state.
+
+        proposal_pdf and proposal must either both be specified or both None.
+
+        :param initial: Initial value of the Markov chain.
+        :param pdf: Desired (unnormalized) probability distribution.
+        :param dim: Dimensionality of points in the current_sample.
+        :param proposal: Function that generates a candidate state, given
+            the previous state as single argument.
+        :param proposal_pdf: Distribution of a proposed candidate.
+            Takes the previous state and the generated candidate as arguments.
         """
-        if proposal_pdf is None or proposal is None:
+        if proposal_pdf is None and proposal is None:
             # default to uniform proposal distribution
-            proposal_pdf = lambda state, candidate: 1
-            proposal = lambda s: np.random.rand(dim)
+            def proposal_pdf(*_):  # candidate and state are not used.
+                """ Uniform proposal distribution. """
+                return 1
+
+            def proposal(_):  # argument state is not used.
+                """ Uniform candidate generation. """
+                return np.random.rand(dim)
+        elif proposal_pdf is None or proposal is None:
+            raise ValueError("Cannot infer either proposal or proposal_pdf "
+                             "from the other. Specify both or neither.")
 
         self.proposal_pdf = proposal_pdf
         super().__init__(initial, pdf, dim, proposal)
 
     def accept(self, state, candidate):
+        """ Probability of accepting candidate as next state. """
         return (self.pdf(candidate) * self.proposal_pdf(candidate, state) /
-                self.pdf(state)/self.proposal_pdf(state, candidate) )
+                self.pdf(state) / self.proposal_pdf(state, candidate))
 
 
 # CHANNELS for Monte Carlo Multi-Channel
+class ChannelSample(object):
+    def __init__(self, channel_weights, sample, sample_sizes, sample_weights):
+        """ Store information about a current_sample generated using Channels.
+
+        self.full_sample_sizes: Total number of points generated in each of
+            the channels. This includes channels which did not contribute.
+            In the remaining attributes, channels that do not contribute are
+            ignored which is useful in processing the current_sample in multi channel
+            Monte Carlo integration.
+
+        self.active_channels: Indices of channels that contributed at least one
+            of the current_sample points.
+
+        self.channel_weights: Weights of the active channels.
+
+        self.count_per_channel: Number of points sampled in each of the
+            active channels.
+
+        self.active_channel_count: Total number of active channels.
+
+        self.channel_bounds: Starting index of current_sample points for each of the
+            active channels in self.current_sample.
+            Starts with zero and ends with a number smaller than the last
+            index of self.current_sample
+
+        self.current_sample: Generated current_sample, shape (sample_size, dim) numpy array.
+
+        self.sample_weights: Weights for each of the current_sample points.
+            The weight is the probability density of the current_sample points.
+
+        :param channel_weights: All channel weights used in generating
+            the current_sample.
+        :param sample: Generated current_sample.
+        :param sample_sizes: Number of samples generated in each channel.
+        :param sample_weights: Probability densities of the sample points.
+        """
+        self.full_sample_sizes = sample_sizes
+
+        # ignore inactive channels i with sample_sizes[i] == 0
+        self.active_channels = np.where(sample_sizes > 0)[0]
+        self.channel_weights = channel_weights[self.active_channels]
+        self.count_per_channel = sample_sizes[self.active_channels]
+
+        # number of channels active in current current_sample
+        self.active_channel_count = self.active_channels.size
+        self.channel_bounds = np.array(
+            [np.sum(self.count_per_channel[0:i])
+             for i in range(self.active_channel_count)])
+
+        self.sample = sample
+        self.sample_weights = sample_weights
+
+
 class Channels(object):
-    def __init__(self, sampling_channels, channel_pdfs, cweights=None):
-        assert len(sampling_channels) == len(channel_pdfs), "Need a pdf for each sampling function."
+    def __init__(self, sampling_channels, channel_pdfs, channel_weights=None):
+        """ Channels construct for multi channel Monte Carlo.
+
+        Contains several importance sampling channels (distributions and
+        sampling methods) with respective weights and provides overall sampling
+        and distribution functions.
+
+        :param sampling_channels: Array of sampling functions for each of
+            the channels.
+        :param channel_pdfs: Array of distributions for each of the sampling
+            methods in sampling_channels.
+        :param channel_weights: Initial weight of the channels. By default
+            assign equal weight to all channels.
+        """
+        assert len(sampling_channels) == len(channel_pdfs), \
+            "Need a pdf for each sampling function."
 
         self.count = len(sampling_channels)
-        self.cweights = np.ones(self.count)/self.count if cweights is None else cweights
-        self.init_cweights = np.copy(self.cweights)
+        if channel_weights is not None:
+            self.channel_weights = channel_weights
+        else:
+            # equal weight to each channel
+            self.channel_weights = np.ones(self.count) / self.count
+        # keep the original channel weights to allow reset
+        self.init_channel_weights = np.copy(self.channel_weights)
         self.sampling_channels = sampling_channels
         self.channel_pdfs = channel_pdfs
 
-        self.Ni = np.zeros(self.count)  # hold sample_count
+        # later store information of generate current_sample
+        self.current_sample = None  # ChannelSample
 
     def reset(self):
-        self.cweights = np.copy(self.init_cweights)
+        """ Revert weights to initial values. """
+        self.channel_weights[:] = self.init_channel_weights
 
     def pdf(self, *x):
+        """  Overall probability of current_sample points x.
+
+        Returns overall probability density of sampling a given point x:
+        sum_i channel_weight_i * channel_pdf_i(x)
+
+        :param x: Total of self.dim numpy array of equal lengths N.
+        :return: Probabilities for each current_sample point. Numpy array
+            of length N.
+        """
         p = 0
         for i in range(self.count):
-            p += self.cweights[i] * self.channel_pdfs[i](*x)
+            p += self.channel_weights[i] * self.channel_pdfs[i](*x)
         return p
 
     def plot_pdf(self, label="total pdf"):
+        """ Plot the overall probability distribution. """
         x = np.linspace(0, 1, 1000)
         y = [self.pdf(xi) for xi in x]
         plt.plot(x, y, label=label)
 
-    def sample(self, N, return_sizes=False):
-        choice = np.random.rand(N)
+    def sample(self, sample_size, return_sizes=False):
+        """ Generate a current_sample, using each channel with the given weight.
+
+        To generate one point in the current_sample, a channel is chosen with
+        the channel_weight as probability and using the corresponding sampling
+        method.
+
+        :param sample_size: Number of samples to generate.
+        :param return_sizes: If true, count the number of samples generated
+            using each channel.
+        :return: Numpy array of shape (sample_size, self.dim).
+            If return_sizes is true, return a tuple of the current_sample (numpy array)
+            and a numpy array specifying the number of samples generated
+            using each channel.
+        """
+        choice = np.random.rand(sample_size)
         sample_sizes = np.empty(self.count, dtype=np.int)
-        a_cum = 0
+        cum_weight = 0  # cumulative weight of channels up to a certain index.
         for i in range(self.count):
-            sample_sizes[i] = np.count_nonzero(np.logical_and(a_cum < choice, choice <= a_cum + self.cweights[i]))
-            a_cum += self.cweights[i]
+            # choose a channel for each current_sample point by distributing the
+            # number of samples over the channels using the respective weights.
+            sample_sizes[i] = np.count_nonzero(
+                np.logical_and(cum_weight < choice,
+                               choice <= cum_weight + self.channel_weights[i]))
+            cum_weight += self.channel_weights[i]
 
         sample_channel_indices = np.where(sample_sizes > 0)[0]
 
-        samples = np.concatenate([assure_2d(self.sampling_channels[i](sample_sizes[i]))
-                                  for i in sample_channel_indices])
+        sample_points = np.concatenate(
+            [assure_2d(self.sampling_channels[i](sample_sizes[i]))
+             for i in sample_channel_indices])
 
         if return_sizes:
-            return samples, sample_sizes
+            return sample_points, sample_sizes
         else:
-            return samples
+            return sample_points
 
-    def generate_sample(self, N):
-        samples, sample_sizes = self.sample(N, True)
+    def generate_sample(self, sample_size):
+        """ Generate a full current_sample and information for multi channel MC.
 
-        self.full_sample_sizes = sample_sizes
-        # ignore channels with sample_count == 0
-        self.sample_channel_indices = np.where(sample_sizes > 0)[0]
-        self.sample_cweights = self.cweights[self.sample_channel_indices]
-        self.sample_sizes = self.full_sample_sizes[self.sample_channel_indices]
-        self.sample_count = self.sample_sizes.size  # number of channels active in current sample
-        self.sample_bounds = np.array([np.sum(self.sample_sizes[0:i]) for i in range(self.sample_count)])
+        The generated ChannelSample containing all information of the channel
+        is returned and saved as self.current_sample.
 
-        self.samples = samples
-        self.sample_weights = self.pdf(*samples.transpose())
+        :param sample_size: Number of current_sample points.
+        :return: A ChannelSample object.
+        """
+        sample, sample_size = self.sample(sample_size, True)
+        weights = self.pdf(*sample.transpose())
+        self.current_sample = ChannelSample(self.channel_weights,
+                                            sample, sample_size, weights)
+        return self.current_sample
 
-    def update_sample_cweights(self, new_cweights):
-        """ Update channels at self.sample_channel_indices with given values. """
-        self.cweights.fill(0)
-        self.cweights[self.sample_channel_indices] = new_cweights
+    def update_channel_weights(self, new_channel_weights):
+        """ Update the channel weights with given values.
+
+        :param new_channel_weights: Channel weights of active channels.
+            All remaining weights are set to zero.
+        """
+        self.channel_weights.fill(0)
+        active_indices = self.current_sample.active_channels
+        self.channel_weights[active_indices] = new_channel_weights
 
 
 # VOLUMES for Stratified Sampling
 # For the strafield monte carlo varient we first need a way to encode the volumes,
-# then iterate over them and sample each one appropriately.
+# then iterate over them and current_sample each one appropriately.
 class GridVolumes(object):
     def __init__(self, bounds=None, Ns={}, otherNs=1, dim=1, divisions=1):
         """
@@ -203,9 +407,9 @@ class GridVolumes(object):
         self.Ns = Ns
         self.otherNs = otherNs
         self.dim = dim
-        self.totalN = sum(Ns.values()) + (divisions**dim - len(Ns)) * otherNs
+        self.totalN = sum(Ns.values()) + (divisions ** dim - len(Ns)) * otherNs
         if bounds is None:
-            self.bounds = [np.linspace(0, 1, divisions+1) for i in range(dim)]
+            self.bounds = [np.linspace(0, 1, divisions + 1) for i in range(dim)]
             self.dim = dim
         else:
             self.bounds = [np.array(b) for b in bounds]
@@ -219,10 +423,12 @@ class GridVolumes(object):
     def plot_pdf(self, label="sampling weights"):
         # visualization of 1d volumes
         assert self.dim == 1, "Can only plot volumes in 1 dimension."
-        height = [N/self.totalN/vol
-                  for N,_,vol in self.iterate()] # bar height corresponds to pdf
+        height = [N / self.totalN / vol
+                  for N, _, vol in
+                  self.iterate()]  # bar height corresponds to pdf
         width = self.bounds[0][1:] - self.bounds[0][:-1]
-        plt.bar(self.bounds[0][:-1], height, width, align='edge', alpha=.4, label=label)
+        plt.bar(self.bounds[0][:-1], height, width, align='edge', alpha=.4,
+                label=label)
 
     def update_bounds_from_sizes(self, sizes):
         for d in range(self.dim):
@@ -236,7 +442,7 @@ class GridVolumes(object):
         """
         indices = np.empty((self.dim, N), dtype=np.int)
         for d in range(self.dim):
-            indices[d] = np.random.randint(0, self.bounds[d].size-1, N)
+            indices[d] = np.random.randint(0, self.bounds[d].size - 1, N)
 
         return indices
 
@@ -246,21 +452,21 @@ class GridVolumes(object):
         samples = np.empty((self.dim, N))
         for d in range(self.dim):
             lower = self.bounds[d][indices[d]]
-            upper = self.bounds[d][indices[d]+1]
+            upper = self.bounds[d][indices[d] + 1]
             samples[d] = lower + (upper - lower) * np.random.rand(N)
         return samples
 
     def iterate(self, multiple=1):
         lower = np.empty(self.dim)
         upper = np.empty(self.dim)
-        for index in np.ndindex(*[len(b)-1 for b in self.bounds]):
+        for index in np.ndindex(*[len(b) - 1 for b in self.bounds]):
             if index in self.Ns:
                 N = int(multiple * self.Ns[index])
             else:
                 N = int(multiple * self.otherNs)
             for d in range(self.dim):
                 lower[d] = self.bounds[d][index[d]]
-                upper[d] = self.bounds[d][index[d]+1]
-            samples = lower + (upper-lower) * np.random.rand(N, self.dim)
+                upper[d] = self.bounds[d][index[d] + 1]
+            samples = lower + (upper - lower) * np.random.rand(N, self.dim)
             vol = np.prod(upper - lower)
             yield N, samples, vol

@@ -62,7 +62,7 @@ Example:
 """
 
 import numpy as np
-from monte_carlo.sampling import GridVolumes, assure_2d
+from monte_carlo.sampling import GridVolumes, Channels, assure_2d
 
 
 # HELPER
@@ -134,7 +134,11 @@ class MonteCarloImportance(object):
 
         Example:
             >>> sampling = lambda size: np.random.rand(size)**2
-            >>> pdf = lambda x:
+            >>> pdf = lambda x: 2*x
+            >>> mc_imp = MonteCarloImportance(1, sampling, pdf)
+            >>> est, err = mc_imp(lambda x: x, 1000)
+            >>> est, err  # the pdf is ideal since f(x)/(2*x) = 1/2 = const
+            (0.5, 0.0)
 
         :param dim: Dimensionality of the integral.
         :param sampling: Function taking a number N as argument and returning
@@ -179,7 +183,8 @@ class MonteCarloImportance(object):
 
 class MonteCarloMultiImportance(object):
 
-    def __init__(self, channels, b=.5, name="MC Multi C.", var_weighted=False):
+    def __init__(self, channels: Channels, b=.5, name="MC Multi C.",
+                 var_weighted=False):
         """ Multi channel Monte Carlo integration.
 
         Use multiple importance sampling channels to approximate the integral.
@@ -195,7 +200,13 @@ class MonteCarloMultiImportance(object):
         Phase 3: Don't update weights and continue using the current weights to
             estimate the integral.
 
-        :type channels: Channels
+        Example:
+            >>> uniform_pdf = lambda *x: 1
+            >>> uniform_sampling = lambda size: np.random.rand(size)
+            >>> channels = Channels([uniform_sampling], [uniform_pdf])
+            >>> mc_imp = MonteCarloMultiImportance(channels)  # same as plain MC
+            >>> est, err = mc_imp(lambda x: x, [], [100], [])
+
         :param channels: (Importance sampling) Channels used in the integration.
         :param b: Exponent between 1/2 and 1/4, used in updating the weights.
         :param name: Name of the method used for plotting.
@@ -275,22 +286,22 @@ class MonteCarloMultiImportance(object):
             sample variance of the estimate w_est. Otherwise return nothing.
             The variance of the estimate is (w_est - est^2) / sample_size
         """
-        self.channels.generate_sample(sample_size)
+        # a ChannelSample object
+        sample = self.channels.generate_sample(sample_size)
 
         # weighted samples of f
-        f_samples = (f(*self.channels.samples.transpose()) /
-                     self.channels.sample_weights)
+        f_samples = (f(*sample.sample.transpose()) / sample.sample_weights)
         # contribution to variance of f
-        w_f = (np.add.reduceat(f_samples ** 2, self.channels.sample_bounds) /
-               self.channels.sample_sizes)
+        w_f = (np.add.reduceat(f_samples ** 2, sample.channel_bounds) /
+               sample.count_per_channel)
 
         if update_weights:
-            factors = self.channels.sample_cweights * np.power(w_f, self.b)
-            self.channels.update_sample_cweights(factors / np.sum(factors))
+            factors = sample.channel_weights * np.power(w_f, self.b)
+            self.channels.update_channel_weights(factors / np.sum(factors))
 
         if get_estimate:
             estimate = np.mean(f_samples)
-            w_est = np.sum(self.channels.sample_cweights * w_f)
+            w_est = np.sum(sample.channel_weights * w_f)
             return estimate, w_est
 
     def __call__(self, f, sample_sizes_1, sample_sizes_2, sample_sizes_3,

@@ -1,3 +1,12 @@
+"""
+Module containing several sampling methods and sampling structures used
+in Monte Carlo integration and sampling techniques.
+
+The core goal of sampling is to generate a sample of points distributed
+according to a general (unnormalized) distribution function about which
+little or nothing is known.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 

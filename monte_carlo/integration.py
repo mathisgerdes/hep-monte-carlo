@@ -23,7 +23,7 @@ the call signature is not the same for all methods.
 Example:
     Divide the integration space into 4 equally sized partitions with a base
     number of 10 sample points in each volume.
-    >>> volumes = GridVolumes(dim=1, divisions=4, otherNs=10)
+    >>> volumes = GridVolumes(dim=1, divisions=4, default_count=10)
     >>> mc_strat = MonteCarloStratified(volumes=volumes)
     >>> # Stratified sampling expects a multiple instead of a total sample size.
     >>> est, err = mc_strat(lambda x: x, 5)  # 5 * 10 sample points per region
@@ -34,7 +34,7 @@ evaluations (which are considered to be expensive -- the asymptotic efficiency
 is usually in this variable) and the integrand are passed.
 
 Example:
-    >>> volumes = GridVolumes(dim=1, divisions=4, otherNs=100)
+    >>> volumes = GridVolumes(dim=1, divisions=4, default_count=100)
     >>> mc_strat = MonteCarloStratified(volumes=volumes)
     >>> mc_strat_ = mc_strat.get_interface_infer_multiple()
     >>> est, err = mc_strat(lambda x: x, 4000)  # multiple is 4000/(4*100) = 40
@@ -370,8 +370,9 @@ class MonteCarloStratified(object):
     def get_interface_infer_multiple(self):
         """ Construct an interface that only takes f and a total sample size.
 
-        If the sample size is not an integer multiple of self.volumes.totalN,
-        the actual number of function evaluations might be lower than N.
+        If the sample size is not an integer multiple of
+        self.volumes.total_base_size, the actual number of function evaluations
+        might be lower than N.
         """
         def interface(f, sample_size):
             """ Approximate the integral of f via using given sample size.
@@ -382,7 +383,7 @@ class MonteCarloStratified(object):
             :param sample_size: Total number of function evaluations.
             :return: Tuple (integral_estimate, error_estimate).
             """
-            return self(f, sample_size / self.volumes.totalN)
+            return self(f, sample_size / self.volumes.total_base_size)
 
         interface.method_name = self.method_name
 
@@ -394,7 +395,7 @@ class MonteCarloStratified(object):
         :param f: Integrand.
         :param multiple: Multiply the base sample size of each region with this
             number. The total number of function evaluations will then be
-            multiple * self.volumes.totalN.
+            multiple * self.volumes.total_base_size.
         :return: Tuple (integral_estimate, error_estimate).
         """
         int_est = 0

@@ -392,24 +392,38 @@ class Channels(object):
 
 
 # VOLUMES for Stratified Sampling
-# For the strafield monte carlo varient we first need a way to encode the volumes,
-# then iterate over them and sample each one appropriately.
+# For the stratified monte carlo variant we first need a way to encode
+# the volumes, then iterate over them and sample each one appropriately.
 class GridVolumes(object):
-    def __init__(self, bounds=None, Ns={}, otherNs=1, dim=1, divisions=1):
-        """
-        Specify either bounds, or divisions and dim.
-        If bounds is given, dim and divisions are ignored.
+    def __init__(self, bounds=None, counts=None, default_count=1,
+                 dim=1, divisions=1):
+        """ Grid-like partition of a the hypercube [0, 1]^dim.
 
-        Args:
-            bounds: Tuple of lists, lists give accumulative boundaries of the volumes.
-                example: bounds=([0, .5, 1]) for two partitions of equal length
+        Each partition has assigned a base count. This class provides methods
+        to adapt the size of the division and sample points randomly for
+        stratified sampling and VEGAS.
+
+        :param bounds: Tuple of lists; accumulative boundaries of the volumes.
+            Example: bounds=([0, .5, 1]) for two 1D partitions of equal length.
+        :param counts: Dictionary specifying base number of samples for bins.
+            The key must indicate the multi-index (tuple!) of the bin.
+        :param default_count: The default number of samples for bins not
+            included in counts. Must be an integer value.
+        :param dim: Dimensionality of the volume. Ignored if bounds is given.
+        :param divisions: Number of divisions along each dimension. Ignored
+            if bounds is given.
         """
-        self.Ns = Ns
-        self.otherNs = otherNs
+        if counts is None:
+            # no entries, always use default_count
+            counts = dict()
+
+        self.Ns = counts
+        self.otherNs = default_count
         self.dim = dim
-        self.totalN = sum(Ns.values()) + (divisions ** dim - len(Ns)) * otherNs
+        self.total_base_size = sum(counts.values()) + \
+            (divisions ** dim - len(counts)) * default_count
         if bounds is None:
-            self.bounds = [np.linspace(0, 1, divisions + 1) for i in range(dim)]
+            self.bounds = [np.linspace(0, 1, divisions + 1) for _ in range(dim)]
             self.dim = dim
         else:
             self.bounds = [np.array(b) for b in bounds]
@@ -418,55 +432,57 @@ class GridVolumes(object):
         self.initial_bounds = [np.copy(b) for b in self.bounds]
 
     def reset(self):
+        """ Reset bounds to initial values. """
         self.bounds = [np.copy(b) for b in self.initial_bounds]
 
     def plot_pdf(self, label="sampling weights"):
+        """ Plot the effective probability density (esp. for VEGAS). """
         # visualization of 1d volumes
         assert self.dim == 1, "Can only plot volumes in 1 dimension."
-        height = [N / self.totalN / vol
-                  for N, _, vol in
-                  self.iterate()]  # bar height corresponds to pdf
+        # bar height corresponds to pdf
+        height = [N / self.total_base_size / vol
+                  for N, _, vol in self.iterate()]
         width = self.bounds[0][1:] - self.bounds[0][:-1]
         plt.bar(self.bounds[0][:-1], height, width, align='edge', alpha=.4,
                 label=label)
 
     def update_bounds_from_sizes(self, sizes):
+        """ Set bounds according to partition sizes. """
         for d in range(self.dim):
             self.bounds[d][1:] = np.cumsum(sizes[d])
 
-    def random_bins(self, N):
+    def random_bins(self, count):
         """ Return the indices of N randomly chosen bins.
 
-        Returns:
-            array of shape dim x N of bin indices.
+        :return: array of shape dim x N of bin indices.
         """
-        indices = np.empty((self.dim, N), dtype=np.int)
+        indices = np.empty((self.dim, count), dtype=np.int)
         for d in range(self.dim):
-            indices[d] = np.random.randint(0, self.bounds[d].size - 1, N)
+            indices[d] = np.random.randint(0, self.bounds[d].size - 1, count)
 
         return indices
 
     def sample(self, indices):
-        """ Note this returns a transposed samples array. """
-        N = indices.shape[1]
-        samples = np.empty((self.dim, N))
+        """ Note this returns a transposed sample array. """
+        count = indices.shape[1]
+        sample = np.empty((self.dim, count))
         for d in range(self.dim):
             lower = self.bounds[d][indices[d]]
             upper = self.bounds[d][indices[d] + 1]
-            samples[d] = lower + (upper - lower) * np.random.rand(N)
-        return samples
+            sample[d] = lower + (upper - lower) * np.random.rand(count)
+        return sample
 
     def iterate(self, multiple=1):
         lower = np.empty(self.dim)
         upper = np.empty(self.dim)
         for index in np.ndindex(*[len(b) - 1 for b in self.bounds]):
             if index in self.Ns:
-                N = int(multiple * self.Ns[index])
+                count = int(multiple * self.Ns[index])
             else:
-                N = int(multiple * self.otherNs)
+                count = int(multiple * self.otherNs)
             for d in range(self.dim):
                 lower[d] = self.bounds[d][index[d]]
                 upper[d] = self.bounds[d][index[d] + 1]
-            samples = lower + (upper - lower) * np.random.rand(N, self.dim)
+            samples = lower + (upper - lower) * np.random.rand(count, self.dim)
             vol = np.prod(upper - lower)
-            yield N, samples, vol
+            yield count, samples, vol

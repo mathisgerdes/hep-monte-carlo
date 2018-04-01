@@ -41,13 +41,13 @@ class AcceptReject(object):
         samples which are then accepted with the probability
         pdf(x)/(c * sampling_pdf(x)), thus producing the desired distribution.
 
-        :param pdf: Unnormalized desired probability distribution of the current_sample.
+        :param pdf: Unnormalized desired probability distribution of the sample.
         :param c: Constant such that pdf(x) <= c * sampling_pdf(x) everywhere.
-        :param dim: Dimensionality of the current_sample points.
+        :param dim: Dimensionality of the sample points.
             This must conform with sampling and sampling_pdf.
         :param sampling_pdf: Returns the probability of sampling to generate
-            a given current_sample. Must accept dim arguments, each of some length N and
-            return an array of floats of length N.
+            a given sample. Must accept dim arguments, each of some
+            length N and return an array of floats of length N.
         :param sampling: Generate a given number of samples according to
             sampling_pdf. The default is a uniform distribution. The algorithm
             gets more efficient, the closer the sampling is to the desired
@@ -60,14 +60,14 @@ class AcceptReject(object):
 
         if sampling is None:
             def sampling(sample_size):
-                """ Generate a uniform current_sample. """
+                """ Generate a uniform sample. """
                 sample = np.random.rand(sample_size * self.dim)
                 return sample.reshape(sample_size, self.dim)
 
         self.sample = sampling
 
     def __call__(self, sample_size):
-        """ Generate a current_sample according to self.pdf of given size.
+        """ Generate a sample according to self.pdf of given size.
 
         :param sample_size: Number of samples
         :return: Numpy array with shape (sample_size, self.dim).
@@ -95,9 +95,9 @@ class GenericMetropolis(object):
 
         :param initial: Initial value of the Markov chain.
         :param pdf: Desired (unnormalized) probability distribution.
-        :param dim: Dimensionality of points in the current_sample.
+        :param dim: Dimensionality of points in the sample.
         :param proposal: A proposal generator (generate candidate points in
-            the current_sample space. These are used in the update mechanism and
+            the sample space. These are used in the update mechanism and
             accepted with a probability self.accept(candidate) that depends
             on the used algorithm. Takes the previous state as argument.
         """
@@ -117,7 +117,7 @@ class GenericMetropolis(object):
         raise NotImplementedError("GenericMetropolis is abstract.")
 
     def __call__(self, sample_size=1, get_accept_rate=False):
-        """ Generate a current_sample of given size.
+        """ Generate a sample of given size.
 
         :param sample_size: Number of samples to generate.
         :param get_accept_rate: If true, compute the acceptance rate.
@@ -150,14 +150,14 @@ class GenericMetropolis(object):
 
 class Metropolis(GenericMetropolis):
     def __init__(self, initial, pdf, dim=1, proposal=None):
-        """ Use the Metropolis algorithm to generate a current_sample.
+        """ Use the Metropolis algorithm to generate a sample.
 
         The proposal must not depend on the current state.
         Use the Metropolis Hasting algorithm if it does.
 
         :param initial: Initial value of the Markov chain.
         :param pdf: Desired (unnormalized) probability distribution.
-        :param dim: Dimensionality of points in the current_sample.
+        :param dim: Dimensionality of points in the sample.
         :param proposal: A proposal generator.
             Takes the previous state as argument, but for this algorithm
             to work must not depend on it (argument exists only for generality
@@ -166,7 +166,7 @@ class Metropolis(GenericMetropolis):
         if proposal is None:
             # default to uniform proposal distribution
             def proposal(_):
-                """ Generate a current_sample with uniform distribution. """
+                """ Generate a sample with uniform distribution. """
                 return np.random.rand(dim)
 
         super().__init__(initial, pdf, dim, proposal)
@@ -189,7 +189,7 @@ class MetropolisHasting(GenericMetropolis):
 
         :param initial: Initial value of the Markov chain.
         :param pdf: Desired (unnormalized) probability distribution.
-        :param dim: Dimensionality of points in the current_sample.
+        :param dim: Dimensionality of points in the sample.
         :param proposal: Function that generates a candidate state, given
             the previous state as single argument.
         :param proposal_pdf: Distribution of a proposed candidate.
@@ -220,16 +220,16 @@ class MetropolisHasting(GenericMetropolis):
 # CHANNELS for Monte Carlo Multi-Channel
 class ChannelSample(object):
     def __init__(self, channel_weights, sample, sample_sizes, sample_weights):
-        """ Store information about a current_sample generated using Channels.
+        """ Store information about a sample generated using Channels.
 
         self.full_sample_sizes: Total number of points generated in each of
             the channels. This includes channels which did not contribute.
             In the remaining attributes, channels that do not contribute are
-            ignored which is useful in processing the current_sample in multi channel
+            ignored which is useful in processing the sample in multi channel
             Monte Carlo integration.
 
         self.active_channels: Indices of channels that contributed at least one
-            of the current_sample points.
+            of the sample points.
 
         self.channel_weights: Weights of the active channels.
 
@@ -238,19 +238,19 @@ class ChannelSample(object):
 
         self.active_channel_count: Total number of active channels.
 
-        self.channel_bounds: Starting index of current_sample points for each of the
-            active channels in self.current_sample.
+        self.channel_bounds: Starting index of sample points for each
+            of the active channels in self.sample.
             Starts with zero and ends with a number smaller than the last
-            index of self.current_sample
+            index of self.sample
 
-        self.current_sample: Generated current_sample, shape (sample_size, dim) numpy array.
+        self.sample: Generated sample, shape (sample_size, dim) numpy array.
 
-        self.sample_weights: Weights for each of the current_sample points.
-            The weight is the probability density of the current_sample points.
+        self.sample_weights: Weights for each of the sample points.
+            The weight is the probability density of the sample points.
 
         :param channel_weights: All channel weights used in generating
-            the current_sample.
-        :param sample: Generated current_sample.
+            the sample.
+        :param sample: Generated sample.
         :param sample_sizes: Number of samples generated in each channel.
         :param sample_weights: Probability densities of the sample points.
         """
@@ -261,7 +261,7 @@ class ChannelSample(object):
         self.channel_weights = channel_weights[self.active_channels]
         self.count_per_channel = sample_sizes[self.active_channels]
 
-        # number of channels active in current current_sample
+        # number of channels active in current sample
         self.active_channel_count = self.active_channels.size
         self.channel_bounds = np.array(
             [np.sum(self.count_per_channel[0:i])
@@ -300,7 +300,7 @@ class Channels(object):
         self.sampling_channels = sampling_channels
         self.channel_pdfs = channel_pdfs
 
-        # later store information of generate current_sample
+        # later store information of generated sample
         self.current_sample = None  # ChannelSample
 
     def reset(self):
@@ -308,13 +308,13 @@ class Channels(object):
         self.channel_weights[:] = self.init_channel_weights
 
     def pdf(self, *x):
-        """  Overall probability of current_sample points x.
+        """  Overall probability of sample points x.
 
         Returns overall probability density of sampling a given point x:
         sum_i channel_weight_i * channel_pdf_i(x)
 
         :param x: Total of self.dim numpy array of equal lengths N.
-        :return: Probabilities for each current_sample point. Numpy array
+        :return: Probabilities for each sample point. Numpy array
             of length N.
         """
         p = 0
@@ -329,9 +329,9 @@ class Channels(object):
         plt.plot(x, y, label=label)
 
     def sample(self, sample_size, return_sizes=False):
-        """ Generate a current_sample, using each channel with the given weight.
+        """ Generate a sample, using each channel with the given weight.
 
-        To generate one point in the current_sample, a channel is chosen with
+        To generate one point in the sample, a channel is chosen with
         the channel_weight as probability and using the corresponding sampling
         method.
 
@@ -339,7 +339,7 @@ class Channels(object):
         :param return_sizes: If true, count the number of samples generated
             using each channel.
         :return: Numpy array of shape (sample_size, self.dim).
-            If return_sizes is true, return a tuple of the current_sample (numpy array)
+            If return_sizes is true, return a tuple of the sample (numpy array)
             and a numpy array specifying the number of samples generated
             using each channel.
         """
@@ -347,7 +347,7 @@ class Channels(object):
         sample_sizes = np.empty(self.count, dtype=np.int)
         cum_weight = 0  # cumulative weight of channels up to a certain index.
         for i in range(self.count):
-            # choose a channel for each current_sample point by distributing the
+            # choose a channel for each sample point by distributing the
             # number of samples over the channels using the respective weights.
             sample_sizes[i] = np.count_nonzero(
                 np.logical_and(cum_weight < choice,
@@ -366,12 +366,12 @@ class Channels(object):
             return sample_points
 
     def generate_sample(self, sample_size):
-        """ Generate a full current_sample and information for multi channel MC.
+        """ Generate a full sample and information for multi channel MC.
 
         The generated ChannelSample containing all information of the channel
         is returned and saved as self.current_sample.
 
-        :param sample_size: Number of current_sample points.
+        :param sample_size: Number of sample points.
         :return: A ChannelSample object.
         """
         sample, sample_size = self.sample(sample_size, True)
@@ -393,7 +393,7 @@ class Channels(object):
 
 # VOLUMES for Stratified Sampling
 # For the strafield monte carlo varient we first need a way to encode the volumes,
-# then iterate over them and current_sample each one appropriately.
+# then iterate over them and sample each one appropriately.
 class GridVolumes(object):
     def __init__(self, bounds=None, Ns={}, otherNs=1, dim=1, divisions=1):
         """

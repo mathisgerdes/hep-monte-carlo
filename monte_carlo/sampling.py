@@ -462,7 +462,7 @@ class GridVolumes(object):
             self.bounds = [np.linspace(0, 1, divisions + 1) for _ in range(dim)]
             self.dim = dim
         else:
-            self.bounds = [np.array(b) for b in bounds]
+            self.bounds = [np.array(b, subok=True, copy=False) for b in bounds]
             self.dim = len(bounds)
         # allow bounds to be modified and later reset
         self.initial_bounds = [np.copy(b) for b in self.bounds]

@@ -95,25 +95,20 @@ class AcceptReject(object):
 
 # METROPOLIS MARKOV CHAINS
 class GenericMetropolis(object):
-    def __init__(self, initial, pdf, dim, proposal):
+    def __init__(self, initial):
         """ Generic Metropolis (Hasting) sampler.
+
+        The dimensionality of the sample points is inferred from the length
+        of initial.
 
         Class is abstract, child class has to implement a function 'accept'.
         Function, takes the previous and next state and returns
         the acceptance probability. (Values greater than 1 are treated as 1.)
 
-        :param initial: Initial value of the Markov chain.
-        :param pdf: Desired (unnormalized) probability distribution.
-        :param dim: Dimensionality of points in the sample.
-        :param proposal: A proposal generator (generate candidate points in
-            the sample space. These are used in the update mechanism and
-            accepted with a probability self.accept(candidate) that depends
-            on the used algorithm. Takes the previous state as argument.
+        :param initial: Initial value of the Markov chain. Numpy array.
         """
         self.state = initial
-        self.pdf = pdf
-        self.dim = dim
-        self.proposal = proposal
+        self.dim = len(initial)
 
     def accept(self, state, candidate):
         """ This function must be implemented by child classes.
@@ -122,6 +117,19 @@ class GenericMetropolis(object):
         :param candidate: Candidate for next state.
         :return: The acceptance probability of a candidate state given the
             previous state in the Markov chain.
+        """
+        raise NotImplementedError("GenericMetropolis is abstract.")
+
+    def proposal(self, state):
+        """ A proposal generator.
+
+        Generate candidate points in the sample space.
+        These are used in the update mechanism and
+        accepted with a probability self.accept(candidate) that depends
+        on the used algorithm.
+
+        :param state: The previous state in the Markov chain.
+        :return: A candidate state.
         """
         raise NotImplementedError("GenericMetropolis is abstract.")
 
@@ -158,36 +166,45 @@ class GenericMetropolis(object):
 
 
 class Metropolis(GenericMetropolis):
-    def __init__(self, initial, pdf, dim=1, proposal=None):
+    def __init__(self, initial, pdf, proposal=None):
         """ Use the Metropolis algorithm to generate a sample.
+
+        The dimensionality of the sample points is inferred from the length
+        of initial.
 
         The proposal must not depend on the current state.
         Use the Metropolis Hasting algorithm if it does.
 
-        :param initial: Initial value of the Markov chain.
+        :param initial: Initial value of the Markov chain. Internally
+            converted to numpy array.
         :param pdf: Desired (unnormalized) probability distribution.
-        :param dim: Dimensionality of points in the sample.
         :param proposal: A proposal generator.
             Takes the previous state as argument, but for this algorithm
             to work must not depend on it (argument exists only for generality
             of the implementation.)
         """
-        if proposal is None:
-            # default to uniform proposal distribution
-            def proposal(_):
-                """ Generate a sample with uniform distribution. """
-                return np.random.rand(dim)
-
-        super().__init__(initial, pdf, dim, proposal)
+        self.pdf = pdf
+        self._proposal = proposal
+        initial = np.array(initial, copy=False, subok=True, ndmin=1)
+        super().__init__(initial)
 
     def accept(self, state, candidate):
         """ Probability of accepting candidate as next state. """
         return self.pdf(candidate) / self.pdf(state)
 
+    def proposal(self, state):
+        """ Propose a candidate state. """
+        if self._proposal is None:
+            return np.random.rand(self.dim)
+
+        return self._proposal(state)
+
 
 class MetropolisHasting(GenericMetropolis):
-    def __init__(self, initial, pdf, dim=1, proposal_pdf=None, proposal=None):
+    def __init__(self, initial, pdf, proposal_pdf=None, proposal=None):
         """ Metropolis Hasting sampler.
+
+        Dimensionality is inferred from the length of initial.
 
         If proposal_pdf and proposal are not specified (None),
         a uniform distribution is used. This makes the method equivalent to
@@ -196,15 +213,18 @@ class MetropolisHasting(GenericMetropolis):
 
         proposal_pdf and proposal must either both be specified or both None.
 
-        :param initial: Initial value of the Markov chain.
+        :param initial: Initial value of the Markov chain (array-like).
         :param pdf: Desired (unnormalized) probability distribution.
-        :param dim: Dimensionality of points in the sample.
         :param proposal: Function that generates a candidate state, given
             the previous state as single argument.
         :param proposal_pdf: Distribution of a proposed candidate.
             Takes the previous state and the generated candidate as arguments.
         """
+        initial = np.array(initial, copy=False, subok=True, ndmin=1)
+
         if proposal_pdf is None and proposal is None:
+            dim = len(initial)
+
             # default to uniform proposal distribution
             def proposal_pdf(*_):  # candidate and state are not used.
                 """ Uniform proposal distribution. """
@@ -217,13 +237,20 @@ class MetropolisHasting(GenericMetropolis):
             raise ValueError("Cannot infer either proposal or proposal_pdf "
                              "from the other. Specify both or neither.")
 
-        self.proposal_pdf = proposal_pdf
-        super().__init__(initial, pdf, dim, proposal)
+        self._proposal = proposal
+        self._proposal_pdf = proposal_pdf
+        self.pdf = pdf
+        self.proposal = proposal
+        super().__init__(initial)
 
     def accept(self, state, candidate):
         """ Probability of accepting candidate as next state. """
-        return (self.pdf(candidate) * self.proposal_pdf(candidate, state) /
-                self.pdf(state) / self.proposal_pdf(state, candidate))
+        return (self.pdf(candidate) * self._proposal_pdf(candidate, state) /
+                self.pdf(state) / self._proposal_pdf(state, candidate))
+
+    def proposal(self, state):
+        """ Propose a candidate state. """
+        return self._proposal(state)
 
 
 # CHANNELS for Monte Carlo Multi-Channel

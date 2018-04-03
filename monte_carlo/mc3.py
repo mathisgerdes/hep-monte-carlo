@@ -13,17 +13,17 @@ from monte_carlo.integration import MonteCarloMultiImportance
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)
 class MC3(object):
 
-    def __init__(self, dim, channels, fn, delta=None,
-                 initial_value=np.random.rand()):
+    def __init__(self, dim, channels, fn, delta=None, initial_value=None):
         self.channels = channels
         self.mc_importance = MonteCarloMultiImportance(channels)
         self.fn = fn
         self.dim = dim
-
-        self.sample_IS = MetropolisHasting(initial_value, self.fn, dim,
+        if initial_value is None:
+            initial_value = np.random.rand(dim)
+        self.sample_IS = MetropolisHasting(initial_value, self.fn,
                                            lambda s, c: self.channels.pdf(c),
                                            lambda s: self.channels.sample(1)[0])
-        self.sample_METROPOLIS = Metropolis(initial_value, self.fn, dim,
+        self.sample_METROPOLIS = Metropolis(initial_value, self.fn,
                                             self.generate_local)
 
         if np.ndim(delta) == 0:

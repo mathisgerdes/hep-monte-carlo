@@ -41,7 +41,7 @@ def assure_2d(array):
 
 
 # ACCEPTANCE REJECTION
-class AcceptReject(object):
+class AcceptRejectSampler(object):
 
     def __init__(self, pdf, c, dim=1, sampling_pdf=lambda *x: 1, sampling=None):
         """ Acceptance Rejection method for sampling a given pdf.
@@ -94,7 +94,84 @@ class AcceptReject(object):
 
 
 # METROPOLIS MARKOV CHAINS
-class GenericMetropolis(object):
+class AbstractMetropolisUpdate(object):
+    """ Generic abstract class to represent a single Metropolis update.
+
+    Does not hold information about a Markov chain but only about
+    the update process used in the chain.
+    """
+
+    def accept(self, state, candidate):
+        """ This function must be implemented by child classes.
+
+        :param state: Previous state in the Markov chain.
+        :param candidate: Candidate for next state.
+        :return: The acceptance probability of a candidate state given the
+            previous state in the Markov chain.
+        """
+        raise NotImplementedError("AbstractMetropolisSampler is abstract.")
+
+    def proposal(self, state):
+        """ A proposal generator.
+
+        Generate candidate points in the sample space.
+        These are used in the update mechanism and
+        accepted with a probability self.accept(candidate) that depends
+        on the used algorithm.
+
+        :param state: The previous state in the Markov chain.
+        :return: A candidate state.
+        """
+        raise NotImplementedError("AbstractMetropolisSampler is abstract.")
+
+
+class MetropolisHastingUpdate(AbstractMetropolisUpdate):
+
+    def __init__(self, pdf, proposal_pdf, proposal):
+        """ Metropolis Hasting update.
+
+        :param pdf: Desired (unnormalized) probability distribution.
+        :param proposal: A proposal generator.
+            Takes the previous state as argument, but for this algorithm
+            to work must not depend on it (argument exists only for generality
+            of the implementation.)
+        """
+        self._proposal = proposal
+        self._proposal_pdf = proposal_pdf
+        self.pdf = pdf
+        self.proposal = proposal
+
+    def accept(self, state, candidate):
+        """ Probability of accepting candidate as next state. """
+        return (self.pdf(candidate) * self._proposal_pdf(candidate, state) /
+                self.pdf(state) / self._proposal_pdf(state, candidate))
+
+    def proposal(self, state):
+        """ Propose a candidate state. """
+        return self._proposal(state)
+
+
+class MetropolisUpdate(MetropolisHastingUpdate):
+
+    def __init__(self, pdf, proposal):
+        """ Metropolis update.
+
+        :param pdf:  Desired (unnormalized) probability distribution.
+        :param proposal: A proposal generator.
+            Takes the previous state as argument, but for this algorithm
+            to work must not depend on it (argument exists only for generality
+            of the implementation.)
+        """
+        # proposal_pdf is not required because proposal is symmetric
+        MetropolisHastingUpdate.__init__(self, pdf, None, proposal)
+
+    def accept(self, state, candidate):
+        """ Probability of accepting candidate as next state. """
+        return self.pdf(candidate) / self.pdf(state)
+
+
+class AbstractMetropolisSampler(object):
+
     def __init__(self, initial):
         """ Generic Metropolis (Hasting) sampler.
 
@@ -110,28 +187,14 @@ class GenericMetropolis(object):
         self.state = initial
         self.dim = len(initial)
 
-    def accept(self, state, candidate):
-        """ This function must be implemented by child classes.
+    def update(self):
+        """ Get the next state in the Markov chain.
 
-        :param state: Previous state in the Markov chain.
-        :param candidate: Candidate for next state.
-        :return: The acceptance probability of a candidate state given the
-            previous state in the Markov chain.
+        Depends on self.state, but must not change it.
+
+        :return: The next state
         """
-        raise NotImplementedError("GenericMetropolis is abstract.")
-
-    def proposal(self, state):
-        """ A proposal generator.
-
-        Generate candidate points in the sample space.
-        These are used in the update mechanism and
-        accepted with a probability self.accept(candidate) that depends
-        on the used algorithm.
-
-        :param state: The previous state in the Markov chain.
-        :return: A candidate state.
-        """
-        raise NotImplementedError("GenericMetropolis is abstract.")
+        raise NotImplementedError("AbstractMetropolisSampler is abstract.")
 
     def __call__(self, sample_size=1, get_accept_rate=False):
         """ Generate a sample of given size.
@@ -148,24 +211,18 @@ class GenericMetropolis(object):
         accepted = 0
 
         for i in range(sample_size):
-            candidate = self.proposal(self.state)
-            accept_prob = self.accept(self.state, candidate)
-            if accept_prob >= 1 or np.random.rand() < accept_prob:
-                self.state = chain[i] = candidate
-
-                # The advantage of not checking in every integration is
-                # negligible. This way is cleaner as it avoids code duplication.
-                if get_accept_rate:
-                    accepted += 1
-            else:
-                chain[i] = self.state
+            next_state = self.update()
+            if get_accept_rate and next_state != self.state:
+                accepted += 1
+            chain[i] = self.state = next_state
 
         if get_accept_rate:
             return chain, accepted / sample_size
         return chain
 
 
-class Metropolis(GenericMetropolis):
+class MetropolisSampler(MetropolisUpdate, AbstractMetropolisSampler):
+
     def __init__(self, initial, pdf, proposal=None):
         """ Use the Metropolis algorithm to generate a sample.
 
@@ -175,6 +232,11 @@ class Metropolis(GenericMetropolis):
         The proposal must not depend on the current state.
         Use the Metropolis Hasting algorithm if it does.
 
+        Example:
+            >>> pdf = lambda x: np.sin(10*x)**2
+            >>> met = MetropolisSampler(0.1, pdf)
+            >>> sample = met(1000)
+
         :param initial: Initial value of the Markov chain. Internally
             converted to numpy array.
         :param pdf: Desired (unnormalized) probability distribution.
@@ -183,24 +245,26 @@ class Metropolis(GenericMetropolis):
             to work must not depend on it (argument exists only for generality
             of the implementation.)
         """
-        self.pdf = pdf
-        self._proposal = proposal
+        if proposal is None:
+            def proposal(_):
+                """ Uniform proposal generator. """
+                return np.random.rand(self.dim)
+
         initial = np.array(initial, copy=False, subok=True, ndmin=1)
-        super().__init__(initial)
+        MetropolisUpdate.__init__(self, pdf, proposal)
+        AbstractMetropolisSampler.__init__(self, initial)
 
-    def accept(self, state, candidate):
-        """ Probability of accepting candidate as next state. """
-        return self.pdf(candidate) / self.pdf(state)
-
-    def proposal(self, state):
-        """ Propose a candidate state. """
-        if self._proposal is None:
-            return np.random.rand(self.dim)
-
-        return self._proposal(state)
+    def update(self):
+        candidate = self.proposal(self.state)
+        accept_prob = self.accept(self.state, candidate)
+        if accept_prob >= 1 or np.random.rand() < accept_prob:
+            return candidate
+        return self.state
 
 
-class MetropolisHasting(GenericMetropolis):
+class MetropolisHastingSampler(MetropolisHastingUpdate,
+                               AbstractMetropolisSampler):
+
     def __init__(self, initial, pdf, proposal_pdf=None, proposal=None):
         """ Metropolis Hasting sampler.
 
@@ -237,20 +301,15 @@ class MetropolisHasting(GenericMetropolis):
             raise ValueError("Cannot infer either proposal or proposal_pdf "
                              "from the other. Specify both or neither.")
 
-        self._proposal = proposal
-        self._proposal_pdf = proposal_pdf
-        self.pdf = pdf
-        self.proposal = proposal
-        super().__init__(initial)
+        MetropolisHastingUpdate.__init__(self, pdf, proposal_pdf, proposal)
+        AbstractMetropolisSampler.__init__(self, initial)
 
-    def accept(self, state, candidate):
-        """ Probability of accepting candidate as next state. """
-        return (self.pdf(candidate) * self._proposal_pdf(candidate, state) /
-                self.pdf(state) / self._proposal_pdf(state, candidate))
-
-    def proposal(self, state):
-        """ Propose a candidate state. """
-        return self._proposal(state)
+    def update(self):
+        candidate = self.proposal(self.state)
+        accept_prob = self.accept(self.state, candidate)
+        if accept_prob >= 1 or np.random.rand() < accept_prob:
+            return candidate
+        return self.state
 
 
 # CHANNELS for Monte Carlo Multi-Channel
@@ -457,7 +516,7 @@ class GridVolumes(object):
         self.otherNs = default_count
         self.dim = dim
         self.total_base_size = sum(counts.values()) + \
-            (divisions ** dim - len(counts)) * default_count
+                               (divisions ** dim - len(counts)) * default_count
         if bounds is None:
             self.bounds = [np.linspace(0, 1, divisions + 1) for _ in range(dim)]
             self.dim = dim

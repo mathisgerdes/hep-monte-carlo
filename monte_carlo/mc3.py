@@ -6,7 +6,7 @@ expensive to evaluate.
 
 import numpy as np
 
-from monte_carlo.sampling import Metropolis, MetropolisHasting
+from monte_carlo.sampling import MetropolisSampler, MetropolisHastingSampler
 from monte_carlo.integration import MonteCarloMultiImportance
 
 
@@ -19,12 +19,15 @@ class MC3(object):
         self.fn = fn
         self.dim = dim
         if initial_value is None:
+            # not necessarily clever since sampling space might not be [0,1].
             initial_value = np.random.rand(dim)
-        self.sample_IS = MetropolisHasting(initial_value, self.fn,
-                                           lambda s, c: self.channels.pdf(c),
-                                           lambda s: self.channels.sample(1)[0])
-        self.sample_METROPOLIS = Metropolis(initial_value, self.fn,
-                                            self.generate_local)
+
+        self.sample_IS = MetropolisHastingSampler(
+            initial_value, self.fn,
+            lambda s, c: self.channels.pdf(c),
+            lambda s: self.channels.sample(1)[0])
+        self.sample_METROPOLIS = MetropolisSampler(
+            initial_value, self.fn, self.generate_local)
 
         if np.ndim(delta) == 0:
             delta = np.ones(dim) * delta

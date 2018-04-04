@@ -94,7 +94,12 @@ class AcceptRejectSampler(object):
 
 
 # METROPOLIS MARKOV CHAINS
-class AbstractMetropolisUpdate(object):
+class AbstractStepUpdate(object):
+    def next_state(self, state):
+        raise NotImplementedError("AbstractStepUpdate is abstract.")
+
+
+class AbstractMetropolisUpdate(AbstractStepUpdate):
     """ Generic abstract class to represent a single Metropolis update.
 
     Does not hold information about a Markov chain but only about
@@ -219,7 +224,7 @@ class AbstractMetropolisSampler(object):
 
         for i in range(sample_size):
             next_state = self.next_state(self.state)
-            if get_accept_rate and next_state != self.state:
+            if get_accept_rate and not np.array_equal(next_state, self.state):
                 accepted += 1
             chain[i] = self.state = next_state
 
@@ -303,6 +308,24 @@ class MetropolisHastingSampler(MetropolisHastingUpdate,
 
         MetropolisHastingUpdate.__init__(self, pdf, proposal_pdf, proposal)
         AbstractMetropolisSampler.__init__(self, initial)
+
+
+class CompositeMetropolisSampler(AbstractMetropolisSampler):
+
+    def __init__(self, initial, mechanisms):
+        """ Composite Metropolis sampler; combine updates.
+
+        :param mechanisms: List of update mechanisms, each subtypes of
+            AbstractMetropolisUpdate
+        """
+        AbstractMetropolisSampler.__init__(self, initial)
+        self.mechanisms = mechanisms
+
+    def next_state(self, state):
+        for mechanism in self.mechanisms:
+            state = mechanism.next_state(state)
+
+        return state
 
 
 # CHANNELS for Monte Carlo Multi-Channel

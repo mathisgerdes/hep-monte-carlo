@@ -109,7 +109,7 @@ class AbstractMetropolisUpdate(object):
         :return: The acceptance probability of a candidate state given the
             previous state in the Markov chain.
         """
-        raise NotImplementedError("AbstractMetropolisSampler is abstract.")
+        raise NotImplementedError("AbstractMetropolisUpdate is abstract.")
 
     def proposal(self, state):
         """ A proposal generator.
@@ -122,7 +122,14 @@ class AbstractMetropolisUpdate(object):
         :param state: The previous state in the Markov chain.
         :return: A candidate state.
         """
-        raise NotImplementedError("AbstractMetropolisSampler is abstract.")
+        raise NotImplementedError("AbstractMetropolisUpdate is abstract.")
+
+    def next_state(self, state):
+        candidate = self.proposal(state)
+        accept_prob = self.accept(state, candidate)
+        if accept_prob >= 1 or np.random.rand() < accept_prob:
+            return candidate
+        return state
 
 
 class MetropolisHastingUpdate(AbstractMetropolisUpdate):
@@ -187,7 +194,7 @@ class AbstractMetropolisSampler(object):
         self.state = initial
         self.dim = len(initial)
 
-    def update(self):
+    def next_state(self, state):
         """ Get the next state in the Markov chain.
 
         Depends on self.state, but must not change it.
@@ -211,7 +218,7 @@ class AbstractMetropolisSampler(object):
         accepted = 0
 
         for i in range(sample_size):
-            next_state = self.update()
+            next_state = self.next_state(self.state)
             if get_accept_rate and next_state != self.state:
                 accepted += 1
             chain[i] = self.state = next_state
@@ -253,13 +260,6 @@ class MetropolisSampler(MetropolisUpdate, AbstractMetropolisSampler):
         initial = np.array(initial, copy=False, subok=True, ndmin=1)
         MetropolisUpdate.__init__(self, pdf, proposal)
         AbstractMetropolisSampler.__init__(self, initial)
-
-    def update(self):
-        candidate = self.proposal(self.state)
-        accept_prob = self.accept(self.state, candidate)
-        if accept_prob >= 1 or np.random.rand() < accept_prob:
-            return candidate
-        return self.state
 
 
 class MetropolisHastingSampler(MetropolisHastingUpdate,
@@ -303,13 +303,6 @@ class MetropolisHastingSampler(MetropolisHastingUpdate,
 
         MetropolisHastingUpdate.__init__(self, pdf, proposal_pdf, proposal)
         AbstractMetropolisSampler.__init__(self, initial)
-
-    def update(self):
-        candidate = self.proposal(self.state)
-        accept_prob = self.accept(self.state, candidate)
-        if accept_prob >= 1 or np.random.rand() < accept_prob:
-            return candidate
-        return self.state
 
 
 # CHANNELS for Monte Carlo Multi-Channel
@@ -516,7 +509,7 @@ class GridVolumes(object):
         self.otherNs = default_count
         self.dim = dim
         self.total_base_size = sum(counts.values()) + \
-                               (divisions ** dim - len(counts)) * default_count
+            (divisions ** dim - len(counts)) * default_count
         if bounds is None:
             self.bounds = [np.linspace(0, 1, divisions + 1) for _ in range(dim)]
             self.dim = dim

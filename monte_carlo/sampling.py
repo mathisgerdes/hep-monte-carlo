@@ -454,17 +454,7 @@ class Channels(object):
             and a numpy array specifying the number of samples generated
             using each channel.
         """
-        choice = np.random.rand(sample_size)
-        sample_sizes = np.empty(self.count, dtype=np.int)
-        cum_weight = 0  # cumulative weight of channels up to a certain index.
-        for i in range(self.count):
-            # choose a channel for each sample point by distributing the
-            # number of samples over the channels using the respective weights.
-            sample_sizes[i] = np.count_nonzero(
-                np.logical_and(cum_weight < choice,
-                               choice <= cum_weight + self.channel_weights[i]))
-            cum_weight += self.channel_weights[i]
-
+        sample_sizes = np.random.multinomial(sample_size, self.channel_weights)
         sample_channel_indices = np.where(sample_sizes > 0)[0]
 
         sample_points = np.concatenate(

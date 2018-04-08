@@ -6,7 +6,7 @@ expensive to evaluate.
 
 import numpy as np
 
-from monte_carlo.sampling import MetropolisSampler, MetropolisHastingSampler
+from monte_carlo.markov import MetropolisSampler, MetropolisHastingSampler
 from monte_carlo.integration import MonteCarloMultiImportance
 
 

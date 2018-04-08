@@ -3,8 +3,8 @@ Module implements Hamilton Monte Carlo methods for sampling.
 """
 
 import numpy as np
-from monte_carlo.sampling import CompositeMetropolisSampler, \
-    AbstractStepUpdate, AbstractMetropolisUpdate
+from monte_carlo.markov import AbstractStepUpdate, AbstractMetropolisUpdate, \
+    CompositeMetropolisSampler
 
 
 class HamiltonLeapfrog(object):

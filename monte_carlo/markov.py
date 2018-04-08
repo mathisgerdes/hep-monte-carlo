@@ -238,3 +238,21 @@ class CompositeMetropolisSampler(AbstractMetropolisSampler):
             state = mechanism.next_state(state)
 
         return state
+
+
+class MixingMetropolisSampler(AbstractMetropolisSampler):
+
+    def __init__(self, initial, mechanisms, weights=None):
+        """ Mix a number of update mechanisms, choosing one in each step.
+
+        :param initial: Initial value.
+        :param mechanisms: List of update mechanisms (AbstractStepUpdate).
+        :param weights: List of weights for each of the mechanisms (sum to 1).
+        """
+        AbstractMetropolisSampler.__init__(self, initial)
+        self.mechanisms = mechanisms
+        self.weights = weights
+
+    def next_state(self, state):
+        mechanism = np.random.choice(self.mechanisms, 1, p=self.weights)
+        return mechanism.next_state(state)

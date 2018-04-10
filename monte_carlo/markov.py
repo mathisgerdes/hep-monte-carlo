@@ -11,7 +11,7 @@ class AbstractStepUpdate(object):
 
 # METROPOLIS (HASTING) UPDATES
 class AbstractMetropolisUpdate(AbstractStepUpdate):
-    """ Generic abstract class to represent a single Metropolis update.
+    """ Generic abstract class to represent a single Metropolis-like update.
 
     Does not hold information about a Markov chain but only about
     the update process used in the chain.
@@ -48,49 +48,38 @@ class AbstractMetropolisUpdate(AbstractStepUpdate):
         return state
 
 
-class MetropolisHastingUpdate(AbstractMetropolisUpdate):
+class MetropolisUpdate(AbstractMetropolisUpdate):
 
-    def __init__(self, pdf, proposal_pdf, proposal):
-        """ Metropolis Hasting update.
+    def __init__(self, pdf, proposal, proposal_pdf=None):
+        """ Metropolis (Hasting) update.
 
         :param pdf: Desired (unnormalized) probability distribution.
         :param proposal: A proposal generator.
             Takes the previous state as argument, but for this algorithm
             to work must not depend on it (argument exists only for generality
             of the implementation.)
+        :param proposal_pdf: Conditional distribution of the candidate, given
+            the state (state as first argument). If None, use the (simpler)
+            Metropolis algorithm, otherwise Metropolis Hasting.
         """
         self._proposal = proposal
+        self.is_hasting = proposal_pdf is not None
         self._proposal_pdf = proposal_pdf
         self.pdf = pdf
         self.proposal = proposal
 
     def accept(self, state, candidate):
         """ Probability of accepting candidate as next state. """
-        return (self.pdf(candidate) * self._proposal_pdf(candidate, state) /
-                self.pdf(state) / self._proposal_pdf(state, candidate))
+        if self.is_hasting:
+            return (self.pdf(candidate) * self._proposal_pdf(candidate, state) /
+                    self.pdf(state) / self._proposal_pdf(state, candidate))
+
+        # otherwise Metropolis update
+        return self.pdf(candidate) / self.pdf(state)
 
     def proposal(self, state):
         """ Propose a candidate state. """
         return self._proposal(state)
-
-
-class MetropolisUpdate(MetropolisHastingUpdate):
-
-    def __init__(self, pdf, proposal):
-        """ Metropolis update.
-
-        :param pdf:  Desired (unnormalized) probability distribution.
-        :param proposal: A proposal generator.
-            Takes the previous state as argument, but for this algorithm
-            to work must not depend on it (argument exists only for generality
-            of the implementation.)
-        """
-        # proposal_pdf is not required because proposal is symmetric
-        MetropolisHastingUpdate.__init__(self, pdf, None, proposal)
-
-    def accept(self, state, candidate):
-        """ Probability of accepting candidate as next state. """
-        return self.pdf(candidate) / self.pdf(state)
 
 
 # CONCRETE SAMPLERS (contain state of the markov chain, allow sampling)
@@ -108,6 +97,7 @@ class AbstractMetropolisSampler(object):
 
         :param initial: Initial value of the Markov chain. Numpy array.
         """
+        initial = np.array(initial, copy=False, subok=True, ndmin=1)
         self.state = initial
         self.dim = len(initial)
 
@@ -147,14 +137,15 @@ class AbstractMetropolisSampler(object):
 
 class MetropolisSampler(MetropolisUpdate, AbstractMetropolisSampler):
 
-    def __init__(self, initial, pdf, proposal=None):
+    def __init__(self, initial, pdf, proposal=None, proposal_pdf=None):
         """ Use the Metropolis algorithm to generate a sample.
 
         The dimensionality of the sample points is inferred from the length
         of initial.
 
-        The proposal must not depend on the current state.
-        Use the Metropolis Hasting algorithm if it does.
+        The proposal must not depend on the current state, if proposal_pdf
+        is None (in that case simple Metropolis is used). If proposal is
+        None, use Metropolis with a uniform proposal in [0,1].
 
         Example:
             >>> pdf = lambda x: np.sin(10*x)**2
@@ -174,51 +165,7 @@ class MetropolisSampler(MetropolisUpdate, AbstractMetropolisSampler):
                 """ Uniform proposal generator. """
                 return np.random.rand(self.dim)
 
-        initial = np.array(initial, copy=False, subok=True, ndmin=1)
-        MetropolisUpdate.__init__(self, pdf, proposal)
-        AbstractMetropolisSampler.__init__(self, initial)
-
-
-class MetropolisHastingSampler(MetropolisHastingUpdate,
-                               AbstractMetropolisSampler):
-
-    def __init__(self, initial, pdf, proposal_pdf=None, proposal=None):
-        """ Metropolis Hasting sampler.
-
-        Dimensionality is inferred from the length of initial.
-
-        If proposal_pdf and proposal are not specified (None),
-        a uniform distribution is used. This makes the method equivalent to
-        the simpler Metropolis algorithm as the candidate distribution does
-        not depend on the previous state.
-
-        proposal_pdf and proposal must either both be specified or both None.
-
-        :param initial: Initial value of the Markov chain (array-like).
-        :param pdf: Desired (unnormalized) probability distribution.
-        :param proposal: Function that generates a candidate state, given
-            the previous state as single argument.
-        :param proposal_pdf: Distribution of a proposed candidate.
-            Takes the previous state and the generated candidate as arguments.
-        """
-        initial = np.array(initial, copy=False, subok=True, ndmin=1)
-
-        if proposal_pdf is None and proposal is None:
-            dim = len(initial)
-
-            # default to uniform proposal distribution
-            def proposal_pdf(*_):  # candidate and state are not used.
-                """ Uniform proposal distribution. """
-                return 1
-
-            def proposal(_):  # argument state is not used.
-                """ Uniform candidate generation. """
-                return np.random.rand(dim)
-        elif proposal_pdf is None or proposal is None:
-            raise ValueError("Cannot infer either proposal or proposal_pdf "
-                             "from the other. Specify both or neither.")
-
-        MetropolisHastingUpdate.__init__(self, pdf, proposal_pdf, proposal)
+        MetropolisUpdate.__init__(self, pdf, proposal, proposal_pdf)
         AbstractMetropolisSampler.__init__(self, initial)
 
 

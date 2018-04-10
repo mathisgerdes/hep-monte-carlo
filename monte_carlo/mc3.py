@@ -6,8 +6,9 @@ expensive to evaluate.
 
 import numpy as np
 
-from monte_carlo.markov import MetropolisSampler, MetropolisHastingSampler
+from monte_carlo.markov import MetropolisSampler
 from monte_carlo.integration import MonteCarloMultiImportance
+from monte_carlo.hmc import HMCMetropolisGauss
 
 
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)
@@ -22,12 +23,12 @@ class MC3(object):
             # not necessarily clever since sampling space might not be [0,1].
             initial_value = np.random.rand(dim)
 
-        self.sample_IS = MetropolisHastingSampler(
+        self.sample_IS = MetropolisSampler(
             initial_value, self.fn,
-            lambda s, c: self.channels.pdf(c),
-            lambda s: self.channels.sample(1)[0])
+            proposal_pdf=lambda s, c: self.channels.pdf(c),
+            proposal=lambda s: self.channels.sample(1)[0])
         self.sample_METROPOLIS = MetropolisSampler(
-            initial_value, self.fn, self.generate_local)
+            initial_value, self.fn, proposal=self.generate_local)
 
         if np.ndim(delta) == 0:
             delta = np.ones(dim) * delta
@@ -99,5 +100,47 @@ class MC3(object):
         :return: Numpy array of shape (sample_size, self.dim). The sample
             generated, following the distribution self.fn.
         """
+        self.integrate(integration_sample_sizes)
+        return self.sample(sample_size, beta)
+
+
+class MC3Hamilton(object):
+
+    def __init__(self, dim, channels, fn, dpot_dq, m,
+                 initial_value=None, step_size=1.1, steps=10):
+        self.channels = channels
+        self.mc_importance = MonteCarloMultiImportance(channels)
+        self.fn = fn
+        self.dim = dim
+        if initial_value is None:
+            # not necessarily clever since sampling space might not be [0,1].
+            initial_value = np.random.rand(dim)
+
+        self.sample_IS = MetropolisSampler(
+            initial_value, self.fn,
+            proposal_pdf=lambda s, c: self.channels.pdf(c),
+            proposal=lambda s: self.channels.sample(1)[0])
+        self.sample_local = HMCMetropolisGauss(
+            initial_value, dim,
+            lambda *x: -np.log(fn(*x)), dpot_dq, m, step_size, steps)
+
+        self.int_est, self.int_err = None, None  # store integration results
+
+    def integrate(self, sample_sizes):
+        self.int_est, self.int_err = self.mc_importance(self.fn, *sample_sizes)
+        return self.int_est, self.int_err
+
+    def sample(self, sample_size, beta):
+        sample = np.empty((sample_size, self.dim))
+
+        for i in range(sample_size):
+            if np.random.rand() <= beta:
+                self.sample_local.state = sample[i] = self.sample_IS(1)
+            else:
+                self.sample_IS.state = sample[i] = self.sample_local(1)
+
+        return sample
+
+    def __call__(self, integration_sample_sizes, sample_size, beta):
         self.integrate(integration_sample_sizes)
         return self.sample(sample_size, beta)

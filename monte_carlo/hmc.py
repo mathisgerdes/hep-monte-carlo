@@ -3,8 +3,7 @@ Module implements Hamilton Monte Carlo methods for sampling.
 """
 
 import numpy as np
-from monte_carlo.markov import AbstractStepUpdate, AbstractMetropolisUpdate, \
-    CompositeMetropolisSampler
+from monte_carlo.markov import AbstractMetropolisUpdate, AbstractMarkovSampler
 
 
 class HamiltonLeapfrog(object):
@@ -45,75 +44,63 @@ class HamiltonLeapfrog(object):
         return q, p
 
 
-class GaussMomentumUpdate(AbstractStepUpdate):
-    def __init__(self, config):
-        self.config = config
-
-    def next_state(self, state):
-        next_state = np.copy(state)
-        next_state[self.config.dim_q:] = np.random.normal(
-            0, np.sqrt(self.config.m), self.config.dim_q)
-        return next_state
-
-
 class HamiltonianUpdate(AbstractMetropolisUpdate):
 
-    def __init__(self, config, pot, dpot_dq, simulate):
-        self.config = config
+    def __init__(self, m, pot, dpot_dq, simulate):
+        self.m = m
         self.simulate = simulate
         self.pot = pot
         self.dpot_dq = dpot_dq
 
+        # artificially introduced state
+        self._p_state = None
+        self._p_candidate = None
+
     def accept(self, state, candidate):
-        q, p = state[:self.config.dim_q], state[self.config.dim_q:]
-        q1, p1 = candidate[:self.config.dim_q], candidate[self.config.dim_q:]
-        prob = np.exp(-self.pot(q1) +
-                      self.pot(q) -
-                      np.sum(p1 ** 2 / self.config.m / 2) +
-                      np.sum(p ** 2 / self.config.m / 2))
+        prob = np.exp(-self.pot(candidate) +
+                      self.pot(state) -
+                      np.sum(self._p_candidate ** 2 / self.m / 2) +
+                      np.sum(self._p_state ** 2 / self.m / 2))
         return prob
 
     def proposal(self, state):
-        q, p = state[:self.config.dim_q], state[self.config.dim_q:]
-
-        candidate = np.empty(self.config.dim)
-        candidate[:self.config.dim_q], candidate[self.config.dim_q:] = \
-            self.simulate(q, p)
-
         # negation makes the update reversible, but method is symmetric
         # in p already so practically irrelevant
         # candidate[self.config.dim_q:] *= -1
 
-        return candidate
+        # first update
+        p_state = np.random.normal(0, np.sqrt(self.m), state.size)
+        self._p_state = p_state
+
+        # second update
+        q, p = self.simulate(state, p_state)
+        self._p_candidate = p
+
+        return q
 
 
-class HMCMetropolisGauss(CompositeMetropolisSampler):
-    def __init__(self, initial_q, dim_q, pot, dpot_dq, m,
-                 steps, step_size, simulation_method=HamiltonLeapfrog):
+class HMCMetropolisGauss(HamiltonianUpdate, AbstractMarkovSampler):
+    def __init__(self, initial_q, pot, dpot_dq, m,
+                 step_size, steps, simulation_method=HamiltonLeapfrog):
         """ Hamilton Monte Carlo Metropolis algorithm.
 
         The variable of interest is referred to as q, pot is the log
         probability density.
 
-        The momentum variables are artificially introduced, such that the total
-        dimensionality of the state in the Metropolis algorithm is 2*dim_q.
+        The momentum variables are artificially introduced and not returned.
         The momenta are sampled according to a Gaussian normal distribution
-        with variance m.
-
-        The default call method returns only the "q" part of the states
-        (i.e. the variables of interest). To get the values of the "momenta"
-        use full_sample.
+        with variance _m.
 
         Example:
             For a Gaussian with variance 1 the log probability is q^2/2.
             >>> pot = lambda q: q**2 / 2
             >>> dpot_dq = lambda q: q
-            >>> hmcm = HMCMetropolisGauss(0.0, 1, pot, dpot_dq, 1, 10, 1)
+            >>> hmcm = HMCMetropolisGauss(0.0, pot, dpot_dq, 1, 10, 1)
             >>> # sample 1000 points that will follow a Gaussian
             >>> points = hmcm(1000)
 
         :param initial_q: Initial value of the variable of interest q.
-        :param dim_q: Dimension of the variable of interest q.
+        :param dim: Dimension of the variable of interest q.
         :param pot: The desired log probability density (of q).
         :param dpot_dq: Partial derivative with respect to q of pot.
         :param m: Variances of the "momentum" distribution.
@@ -122,20 +109,14 @@ class HMCMetropolisGauss(CompositeMetropolisSampler):
         :param simulation_method: Class used to simulate the steps.
             A custom implementation must follow that of HamiltonLeapfrog.
         """
-        self.m = np.array(m, copy=False, subok=True, ndmin=1)
+        m = np.array(m, copy=False, subok=True, ndmin=1)
         self.pot = pot
         self.dpot_dq = dpot_dq
-        self.dim_q = dim_q
 
         simulate = simulation_method(dpot_dq, self.dkin_dp, step_size, steps)
 
-        initial = np.empty(2 * dim_q)
-        initial[:dim_q] = initial_q
-        initial[dim_q:] = np.random.normal(0, np.sqrt(self.m), dim_q)
-
-        super().__init__(initial, [GaussMomentumUpdate(self),
-                                   HamiltonianUpdate(self, pot, dpot_dq,
-                                                     simulate)])
+        HamiltonianUpdate.__init__(self, m, pot, dpot_dq, simulate)
+        AbstractMarkovSampler.__init__(self, initial_q)
 
     def dkin_dp(self, p):
         return p / self.m  # Gaussian
@@ -143,9 +124,19 @@ class HMCMetropolisGauss(CompositeMetropolisSampler):
     def full_sample(self, sample_size, get_accept_rate):
         return super().__call__(sample_size, get_accept_rate)
 
-    def __call__(self, sample_size=1, get_accept_rate=False):
-        res = super().__call__(sample_size, get_accept_rate=get_accept_rate)
-        if get_accept_rate:
-            return res[0][:, :self.dim_q], res[1]
+    @property
+    def step_size(self):
+        return self.simulate.step_size
 
-        return res[:, :self.dim_q]
+    @step_size.setter
+    def step_size(self, step_size):
+        self.simulate.step_size = step_size
+
+    @property
+    def steps(self):
+        return self.simulate.steps
+
+    @steps.setter
+    def steps(self, steps):
+        self.simulate.steps = steps
+

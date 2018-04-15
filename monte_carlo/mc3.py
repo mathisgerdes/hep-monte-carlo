@@ -6,7 +6,7 @@ expensive to evaluate.
 
 import numpy as np
 
-from monte_carlo.markov import MetropolisSampler
+from monte_carlo.markov import MetropolisSampler, MixingMetropolisSampler
 from monte_carlo.integration import MonteCarloMultiImportance
 from monte_carlo.hmc import HMCMetropolisGauss
 
@@ -57,8 +57,8 @@ class MC3(object):
         base_capped = np.minimum(base, np.ones(self.dim) - self.delta)
         return base_capped + np.random.rand() * self.delta
 
-    def integrate(self, sample_sizes):
-        """
+    def integrate(self, *sample_sizes):
+        """ Execute multi channel integration and optimization.
 
         :param sample_sizes: Tuple of three lists of integers, giving the
             sample sizes of each iteration of the three phases of multi channel
@@ -100,7 +100,7 @@ class MC3(object):
         :return: Numpy array of shape (sample_size, self.dim). The sample
             generated, following the distribution self.fn.
         """
-        self.integrate(integration_sample_sizes)
+        self.integrate(*integration_sample_sizes)
         return self.sample(sample_size, beta)
 
 
@@ -117,30 +117,42 @@ class MC3Hamilton(object):
             initial_value = np.random.rand(dim)
 
         self.sample_IS = MetropolisSampler(
-            initial_value, self.fn,
+            initial_value, self.fn,  # initial value will be ignored later
             proposal_pdf=lambda s, c: self.channels.pdf(c),
             proposal=lambda s: self.channels.sample(1)[0])
         self.sample_local = HMCMetropolisGauss(
-            initial_value, dim,
-            lambda *x: -np.log(fn(*x)), dpot_dq, m, step_size, steps)
+            initial_value, lambda *x: -np.log(fn(*x)),
+            dpot_dq, m, step_size, steps)
+
+        updates = [self.sample_IS, self.sample_local]
+        self.sampler = MixingMetropolisSampler(initial_value, updates)
 
         self.int_est, self.int_err = None, None  # store integration results
 
-    def integrate(self, sample_sizes):
+    def integrate(self, *sample_sizes):
         self.int_est, self.int_err = self.mc_importance(self.fn, *sample_sizes)
         return self.int_est, self.int_err
 
     def sample(self, sample_size, beta):
-        sample = np.empty((sample_size, self.dim))
+        self.sampler.weights = np.array([beta, 1-beta])
+        return self.sampler(sample_size)
 
-        for i in range(sample_size):
-            if np.random.rand() <= beta:
-                self.sample_local.state = sample[i] = self.sample_IS(1)
-            else:
-                self.sample_IS.state = sample[i] = self.sample_local(1)
+    @property
+    def step_size(self):
+        return self.sample_local.step_size
 
-        return sample
+    @step_size.setter
+    def step_size(self, step_size):
+        self.sample_local.step_size = step_size
+
+    @property
+    def steps(self):
+        return self.sample_local.steps
+
+    @steps.setter
+    def steps(self, steps):
+        self.sample_local.steps = steps
 
     def __call__(self, integration_sample_sizes, sample_size, beta):
-        self.integrate(integration_sample_sizes)
+        self.integrate(*integration_sample_sizes)
         return self.sample(sample_size, beta)

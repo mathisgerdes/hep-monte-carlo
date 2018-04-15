@@ -43,7 +43,7 @@ def assure_2d(array):
 # ACCEPTANCE REJECTION
 class AcceptRejectSampler(object):
 
-    def __init__(self, pdf, c, dim=1, sampling_pdf=lambda *x: 1, sampling=None):
+    def __init__(self, pdf, bound, dim=1, sampling=None, sampling_pdf=None):
         """ Acceptance Rejection method for sampling a given pdf.
 
         The method uses a known distribution and sampling method to propose
@@ -51,21 +51,22 @@ class AcceptRejectSampler(object):
         pdf(x)/(c * sampling_pdf(x)), thus producing the desired distribution.
 
         :param pdf: Unnormalized desired probability distribution of the sample.
-        :param c: Constant such that pdf(x) <= c * sampling_pdf(x) everywhere.
+        :param bound: Constant such that pdf(x) <= bound * sampling_pdf(x)
+            for all x in the range of sampling.
         :param dim: Dimensionality of the sample points.
             This must conform with sampling and sampling_pdf.
-        :param sampling_pdf: Returns the probability of sampling to generate
-            a given sample. Must accept dim arguments, each of some
-            length N and return an array of floats of length N.
         :param sampling: Generate a given number of samples according to
             sampling_pdf. The default is a uniform distribution. The algorithm
             gets more efficient, the closer the sampling is to the desired
             distribution pdf(x).
+        :param sampling_pdf: Returns the probability of sampling to generate
+            a given sample. Must accept dim arguments, each of some
+            length N and return an array of floats of length N. Ignored if
+            sampling was not specified.
         """
         self.pdf = pdf
-        self.c = c
+        self.c = bound
         self.dim = dim
-        self.sample_pdf = sampling_pdf
 
         if sampling is None:
             def sampling(sample_size):
@@ -73,7 +74,12 @@ class AcceptRejectSampler(object):
                 sample = np.random.rand(sample_size * self.dim)
                 return sample.reshape(sample_size, self.dim)
 
+            def sampling_pdf(*_):
+                """ Uniform sample distribution. """
+                return 1
+
         self.sample = sampling
+        self.sample_pdf = sampling_pdf
 
     def __call__(self, sample_size):
         """ Generate a sample according to self.pdf of given size.
@@ -107,7 +113,7 @@ class ChannelSample(object):
         self.active_channels: Indices of channels that contributed at least one
             of the sample points.
 
-        self.channel_weights: Weights of the active channels.
+        self.channels_weight: Weights of the active channels.
 
         self.count_per_channel: Number of points sampled in each of the
             active channels.
@@ -148,40 +154,40 @@ class ChannelSample(object):
 
 
 class Channels(object):
-    def __init__(self, sampling_channels, channel_pdfs, channel_weights=None):
+    def __init__(self, channels_sampling, channels_pdf, channels_weight=None):
         """ Channels construct for multi channel Monte Carlo.
 
         Contains several importance sampling channels (distributions and
         sampling methods) with respective weights and provides overall sampling
         and distribution functions.
 
-        :param sampling_channels: Array of sampling functions for each of
+        :param channels_sampling: Array of sampling functions for each of
             the channels.
-        :param channel_pdfs: Array of distributions for each of the sampling
+        :param channels_pdf: Array of distributions for each of the sampling
             methods in sampling_channels.
-        :param channel_weights: Initial weight of the channels. By default
+        :param channels_weight: Initial weight of the channels. By default
             assign equal weight to all channels.
         """
-        assert len(sampling_channels) == len(channel_pdfs), \
+        assert len(channels_sampling) == len(channels_pdf), \
             "Need a pdf for each sampling function."
 
-        self.count = len(sampling_channels)
-        if channel_weights is not None:
-            self.channel_weights = channel_weights
+        self.count = len(channels_sampling)
+        if channels_weight is not None:
+            self.channels_weight = channels_weight
         else:
             # equal weight to each channel
-            self.channel_weights = np.ones(self.count) / self.count
+            self.channels_weight = np.ones(self.count) / self.count
         # keep the original channel weights to allow reset
-        self.init_channel_weights = np.copy(self.channel_weights)
-        self.sampling_channels = sampling_channels
-        self.channel_pdfs = channel_pdfs
+        self.init_channel_weights = np.copy(self.channels_weight)
+        self.sampling_channels = channels_sampling
+        self.channel_pdfs = channels_pdf
 
         # later store information of generated sample
         self.current_sample = None  # ChannelSample
 
     def reset(self):
         """ Revert weights to initial values. """
-        self.channel_weights[:] = self.init_channel_weights
+        self.channels_weight[:] = self.init_channel_weights
 
     def pdf(self, *x):
         """  Overall probability of sample points x.
@@ -195,7 +201,7 @@ class Channels(object):
         """
         p = 0
         for i in range(self.count):
-            p += self.channel_weights[i] * self.channel_pdfs[i](*x)
+            p += self.channels_weight[i] * self.channel_pdfs[i](*x)
         return p
 
     def plot_pdf(self, label="total pdf"):
@@ -219,7 +225,7 @@ class Channels(object):
             and a numpy array specifying the number of samples generated
             using each channel.
         """
-        sample_sizes = np.random.multinomial(sample_size, self.channel_weights)
+        sample_sizes = np.random.multinomial(sample_size, self.channels_weight)
         sample_channel_indices = np.where(sample_sizes > 0)[0]
 
         sample_points = np.concatenate(
@@ -242,7 +248,7 @@ class Channels(object):
         """
         sample, sample_size = self.sample(sample_size, True)
         weights = self.pdf(*sample.transpose())
-        self.current_sample = ChannelSample(self.channel_weights,
+        self.current_sample = ChannelSample(self.channels_weight,
                                             sample, sample_size, weights)
         return self.current_sample
 
@@ -252,16 +258,16 @@ class Channels(object):
         :param new_channel_weights: Channel weights of active channels.
             All remaining weights are set to zero.
         """
-        self.channel_weights.fill(0)
+        self.channels_weight.fill(0)
         active_indices = self.current_sample.active_channels
-        self.channel_weights[active_indices] = new_channel_weights
+        self.channels_weight[active_indices] = new_channel_weights
 
 
 # VOLUMES for Stratified Sampling
 # For the stratified monte carlo variant we first need a way to encode
 # the volumes, then iterate over them and sample each one appropriately.
 class GridVolumes(object):
-    def __init__(self, bounds=None, counts=None, default_count=1,
+    def __init__(self, bounds=None, base_counts=None, default_count=1,
                  dim=1, divisions=1):
         """ Grid-like partition of a the hypercube [0, 1]^dim.
 
@@ -271,7 +277,7 @@ class GridVolumes(object):
 
         :param bounds: Tuple of lists; accumulative boundaries of the volumes.
             Example: bounds=([0, .5, 1]) for two 1D partitions of equal length.
-        :param counts: Dictionary specifying base number of samples for bins.
+        :param base_counts: Dictionary specifying base number of samples for bins.
             The key must indicate the multi-index (tuple!) of the bin.
         :param default_count: The default number of samples for bins not
             included in counts. Must be an integer value.
@@ -279,15 +285,15 @@ class GridVolumes(object):
         :param divisions: Number of divisions along each dimension. Ignored
             if bounds is given.
         """
-        if counts is None:
-            # no entries, always use default_count
-            counts = dict()
+        if base_counts is None:
+            # no entries, always use default_base_count
+            base_counts = dict()
 
-        self.Ns = counts
-        self.otherNs = default_count
+        self.base_counts = base_counts
+        self.default_base_count = default_count
         self.dim = dim
-        self.total_base_size = sum(counts.values()) + \
-            (divisions ** dim - len(counts)) * default_count
+        self.total_base_size = sum(base_counts.values()) + \
+            default_count * (divisions ** dim - len(base_counts))
         if bounds is None:
             self.bounds = [np.linspace(0, 1, divisions + 1) for _ in range(dim)]
             self.dim = dim
@@ -342,10 +348,10 @@ class GridVolumes(object):
         lower = np.empty(self.dim)
         upper = np.empty(self.dim)
         for index in np.ndindex(*[len(b) - 1 for b in self.bounds]):
-            if index in self.Ns:
-                count = int(multiple * self.Ns[index])
+            if index in self.base_counts:
+                count = int(multiple * self.base_counts[index])
             else:
-                count = int(multiple * self.otherNs)
+                count = int(multiple * self.default_base_count)
             for d in range(self.dim):
                 lower[d] = self.bounds[d][index[d]]
                 upper[d] = self.bounds[d][index[d] + 1]

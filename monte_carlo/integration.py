@@ -23,7 +23,7 @@ the call signature is not the same for all methods.
 Example:
     Divide the integration space into 4 equally sized partitions with a base
     number of 10 sample points in each volume.
-    >>> volumes = GridVolumes(dim=1, divisions=4, default_count=10)
+    >>> volumes = GridVolumes(dim=1, divisions=4, default_base_count=10)
     >>> mc_strat = MonteCarloStratified(volumes=volumes)
     >>> # Stratified sampling expects a multiple instead of a total sample size.
     >>> est, err = mc_strat(lambda x: x, 5)  # 5 * 10 sample points per region
@@ -34,7 +34,7 @@ evaluations (which are considered to be expensive -- the asymptotic efficiency
 is usually in this variable) and the integrand are passed.
 
 Example:
-    >>> volumes = GridVolumes(dim=1, divisions=4, default_count=100)
+    >>> volumes = GridVolumes(dim=1, divisions=4, default_base_count=100)
     >>> mc_strat = MonteCarloStratified(volumes=volumes)
     >>> mc_strat_ = mc_strat.get_interface_infer_multiple()
     >>> est, err = mc_strat(lambda x: x, 4000)  # multiple is 4000/(4*100) = 40

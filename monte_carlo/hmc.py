@@ -3,7 +3,7 @@ Module implements Hamilton Monte Carlo methods for sampling.
 """
 
 import numpy as np
-from monte_carlo.markov import AbstractMetropolisUpdate, AbstractMarkovSampler
+from monte_carlo.markov import AbstractMetropolisUpdate
 
 
 class HamiltonLeapfrog(object):
@@ -46,7 +46,8 @@ class HamiltonLeapfrog(object):
 
 class HamiltonianUpdate(AbstractMetropolisUpdate):
 
-    def __init__(self, m, pot, dpot_dq, simulate):
+    def __init__(self, dim, m, pot, dpot_dq, simulate):
+        super().__init__(dim)
         self.m = m
         self.simulate = simulate
         self.pot = pot
@@ -64,23 +65,22 @@ class HamiltonianUpdate(AbstractMetropolisUpdate):
         return prob
 
     def proposal(self, state):
-        # negation makes the update reversible, but method is symmetric
-        # in p already so practically irrelevant
-        # candidate[self.config.dim_q:] *= -1
-
         # first update
         p_state = np.random.normal(0, np.sqrt(self.m), state.size)
         self._p_state = p_state
 
         # second update
         q, p = self.simulate(state, p_state)
+        # negation makes the update reversible, but method is symmetric
+        # in p already so practically irrelevant
+        # p *= -1
         self._p_candidate = p
 
         return q
 
 
-class HMCMetropolisGauss(HamiltonianUpdate, AbstractMarkovSampler):
-    def __init__(self, initial_q, pot, dpot_dq, m,
+class HMCGaussUpdate(HamiltonianUpdate):
+    def __init__(self, dim, pot, dpot_dq, m,
                  step_size, steps, simulation_method=HamiltonLeapfrog):
         """ Hamilton Monte Carlo Metropolis algorithm.
 
@@ -89,15 +89,16 @@ class HMCMetropolisGauss(HamiltonianUpdate, AbstractMarkovSampler):
 
         The momentum variables are artificially introduced and not returned.
         The momenta are sampled according to a Gaussian normal distribution
-        with variance _m.
+        with variance m.
 
         Example:
             For a Gaussian with variance 1 the log probability is q^2/2.
             >>> pot = lambda q: q**2 / 2
             >>> dpot_dq = lambda q: q
-            >>> hmcm = HMCMetropolisGauss(0.0, pot, dpot_dq, 1, 10, 1)
+            >>> hmcm = HMCGaussUpdate(1, pot, dpot_dq, 1, 10, 1)
+            >>> hmcm.init_sampler(0.0)
             >>> # sample 1000 points that will follow a Gaussian
-            >>> points = hmcm(1000)
+            >>> points = hmcm.sample(1000)
 
         :param initial_q: Initial value of the variable of interest q.
         :param dim: Dimension of the variable of interest q.
@@ -115,14 +116,13 @@ class HMCMetropolisGauss(HamiltonianUpdate, AbstractMarkovSampler):
 
         simulate = simulation_method(dpot_dq, self.dkin_dp, step_size, steps)
 
-        HamiltonianUpdate.__init__(self, m, pot, dpot_dq, simulate)
-        AbstractMarkovSampler.__init__(self, initial_q)
+        super().__init__(dim, m, pot, dpot_dq, simulate)
 
     def dkin_dp(self, p):
         return p / self.m  # Gaussian
 
     def full_sample(self, sample_size, get_accept_rate):
-        return super().__call__(sample_size, get_accept_rate)
+        return super().sample(sample_size, get_accept_rate)
 
     @property
     def step_size(self):

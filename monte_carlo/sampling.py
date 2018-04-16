@@ -78,10 +78,10 @@ class AcceptRejectSampler(object):
                 """ Uniform sample distribution. """
                 return 1
 
-        self.sample = sampling
-        self.sample_pdf = sampling_pdf
+        self.sampling = sampling
+        self.sampling_pdf = sampling_pdf
 
-    def __call__(self, sample_size):
+    def sample(self, sample_size):
         """ Generate a sample according to self.pdf of given size.
 
         :param sample_size: Number of samples
@@ -91,8 +91,8 @@ class AcceptRejectSampler(object):
 
         indices = np.arange(sample_size)
         while indices.size > 0:
-            proposal = assure_2d(self.sample(indices.size))
-            accept = np.random.rand(indices.size) * self.c * self.sample_pdf(
+            proposal = assure_2d(self.sampling(indices.size))
+            accept = np.random.rand(indices.size) * self.c * self.sampling_pdf(
                 *proposal.transpose()) <= self.pdf(*proposal.transpose())
             x[indices[accept]] = proposal[accept]
             indices = indices[np.logical_not(accept)]

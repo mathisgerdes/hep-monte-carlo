@@ -121,9 +121,6 @@ class HMCGaussUpdate(HamiltonianUpdate):
     def dkin_dp(self, p):
         return p / self.m  # Gaussian
 
-    def full_sample(self, sample_size, get_accept_rate):
-        return super().sample(sample_size, get_accept_rate)
-
     @property
     def step_size(self):
         return self.simulate.step_size

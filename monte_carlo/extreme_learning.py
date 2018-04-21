@@ -13,8 +13,23 @@ class FunctionBasis(object):
     def random_params(self, node_count):
         raise NotImplementedError
 
-    def eval(self, xs, params, out_weights):
-        return np.dot(self.output_matrix(xs, params), out_weights)
+    def eval_all(self, params, out_weights, *xs):
+        if len(xs) == 1:
+            xs_arr = np.array(xs[0], copy=False, subok=True, ndmin=1)
+            xs_arr = assure_2d(xs_arr)
+            return np.dot(self.output_matrix(xs_arr, params), out_weights)
+        else:
+            first = np.array(xs[0], copy=False, subok=True)
+            shape = first.shape
+            size = first.size
+            xs_arr = np.array(xs, copy=False, subok=True).reshape(len(xs), size)
+            xs_arr = assure_2d(xs_arr.transpose())
+            out = self.eval_all(params, out_weights, xs_arr)
+            return out.reshape(shape)
+
+    def eval(self, params, out_weights, x):
+        xs = np.array(x, copy=False, subok=True, ndmin=2)
+        return np.dot(self.output_matrix(xs, params), out_weights)[0]
 
     def extreme_learning_train(self, xs, values, node_count, params=None):
         xs = assure_2d(xs)
@@ -78,7 +93,6 @@ class AdditiveBasis(FunctionBasis):
         raise NotImplementedError
 
     def output_matrix(self, xs, params):
-        xs = assure_2d(xs)
         biases, in_weights, fn_params = params
 
         # inputs: node_count * dim
@@ -106,7 +120,7 @@ class TrigBasis(AdditiveBasis):
 
         Example:
         >>> fn = lambda x: np.sin(5 * x)  # want to learn this
-        >>> basis = TrigBasis(1, .1)
+        >>> basis = TrigBasis(1)
         >>> xs = np.random.rand(100)      # 100 random points
         >>> values = fn(xs)               # then learn using 100 nodes:
         >>> params, weights = basis.extreme_learning_train(xs, values, 100)
@@ -116,7 +130,7 @@ class TrigBasis(AdditiveBasis):
         :param bias_range: Range the input bias can have.
         """
         super().__init__(dim, weight_range, bias_range)
-        self.include_zero_weight = True  # equivalent to external bias
+        self.include_zero_weight = True  # equivalent to output bias
 
     def get_outputs(self, inputs, fn_params):
         return np.cos(inputs)

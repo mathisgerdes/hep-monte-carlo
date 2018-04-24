@@ -69,7 +69,7 @@ class AdditiveBasis(FunctionBasis):
         If the input is xi and the input weights are wi with biases bi
         (the index i corresponds to the i-th node), the output is
         z(xi) = sum_i gi(wi * xi + bi),
-        where the wi and xi are all dim-dimensional and bi are scalars,
+        where the wi and xi are all ndim-dimensional and bi are scalars,
         gi are the activation functions.
 
 
@@ -107,7 +107,7 @@ class AdditiveBasis(FunctionBasis):
     def output_matrix(self, xs, params):
         biases, in_weights, fn_params = params
 
-        # inputs: node_count * dim
+        # inputs: node_count * ndim
         inputs = biases[np.newaxis, :] + np.dot(xs, in_weights.transpose())
 
         outputs = self.get_outputs(inputs, fn_params)
@@ -129,7 +129,7 @@ class RadialBasis(FunctionBasis):
                  multi_widths=False):
         """ Linear combination of input followed by non-linear function.
 
-        For a given number of nodes N, use N dim-dimensional centers ci
+        For a given number of nodes N, use N ndim-dimensional centers ci
         (s.t. -ci is the bias) and N widths wi to approximate
         the output to xi input points (wi are N dimensional if multi_widths is
         True, otherwise 1 dimensional):
@@ -138,12 +138,12 @@ class RadialBasis(FunctionBasis):
 
         :param dim: Dimensionality of variable space (value space is 1D)
         :param width_range: Range the widths can be in. Tuple of either scalars
-            or dim-dimensional numpy arrays (if multi_widths is True).
+            or ndim-dimensional numpy arrays (if multi_widths is True).
         :param center_range: Range the centers can be in. Choose such that
             the centers span the x-space. Tuple of either scalars or
-            dim-dimensional numpy arrays.
-        :param multi_widths: True if the widths are dim-dimensional, i.e.
-            if the radial functions are stretched independently in each dim.
+            ndim-dimensional numpy arrays.
+        :param multi_widths: True if the widths are ndim-dimensional, i.e.
+            if the radial functions are stretched independently in each ndim.
         """
         super().__init__(dim)
 
@@ -165,10 +165,10 @@ class RadialBasis(FunctionBasis):
         xs = assure_2d(xs)
         centers, widths, fn_params = params
 
-        # inputs: xs.size * node_count * dim
+        # inputs: xs.size * node_count * ndim
         inputs = xs[:, np.newaxis, :] - centers[np.newaxis, :, :]
         if self.multi_width:
-            # inputs: (xs.size * node_count * dim) / (node_count * dim)
+            # inputs: (xs.size * node_count * ndim) / (node_count * ndim)
             inputs = inputs / widths
             inputs = np.linalg.norm(inputs, axis=2)
         else:
@@ -222,7 +222,7 @@ class TrigBasis(AdditiveBasis):
 # CONCRETE RADIAL BASES
 class GaussianBasis(RadialBasis):
 
-    def __init__(self, dim, width_range=(0, 1), center_range=(0, 1),
+    def __init__(self, ndim, width_range=(0, 1), center_range=(0, 1),
                  multi_widths=False):
         """ Radial function basis using a single Gaussian as non-linearity.
 
@@ -234,16 +234,16 @@ class GaussianBasis(RadialBasis):
         >>> pars, bias, weights = basis.extreme_learning_train(xs, values, 100)
         >>> val = basis.eval_all(pars, bias, weights, [.1, .2])
 
-        :param dim: Dimensionality of variable space (value space is 1D)
+        :param ndim: Dimensionality of variable space (value space is 1D)
         :param width_range: Range the widths can be in. Tuple of either scalars
-            or dim-dimensional numpy arrays (if multi_widths is True).
+            or ndim-dimensional numpy arrays (if multi_widths is True).
         :param center_range: Range the centers can be in. Choose such that
             the centers span the x-space. Tuple of either scalars or
-            dim-dimensional numpy arrays.
-        :param multi_widths: True if the widths are dim-dimensional, i.e.
-            if the radial functions are stretched independently in each dim.
+            ndim-dimensional numpy arrays.
+        :param multi_widths: True if the widths are ndim-dimensional, i.e.
+            if the radial functions are stretched independently in each ndim.
         """
-        super().__init__(dim, width_range, center_range, multi_widths)
+        super().__init__(ndim, width_range, center_range, multi_widths)
 
     def get_outputs(self, inputs, fn_params):
         return gauss.pdf(inputs)

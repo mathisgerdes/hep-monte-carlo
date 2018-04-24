@@ -3,27 +3,27 @@ Module implements Hamilton Monte Carlo methods for sampling.
 """
 
 import numpy as np
-from monte_carlo.markov import AbstractMetropolisUpdate
+from monte_carlo.markov import MetropolisLikeUpdate
 
 
 class HamiltonLeapfrog(object):
 
-    def __init__(self, dpot_dq, dkin_dp, step_size, steps):
+    def __init__(self, pot_gradient, kin_gradient, step_size, steps):
         """ Leapfrog method to simulate Hamiltonian propagation.
 
         This method is based on a general structure of the Hamiltonian of
         H = kinetic(p) + potential(q),
         where q is the "space" and p the "momentum" variable.
 
-        :param dpot_dq: Partial derivative of the potential with respect to q.
-        :param dkin_dp: Partial derivative of the kinetic energy
+        :param pot_gradient: Partial derivative of the potential with respect to q.
+        :param kin_gradient: Partial derivative of the kinetic energy
             with respect to p.
         :param step_size: Size of a simulation step in "time"-space.
         :param steps: Number of iterations to perform in each call.
 
         """
-        self.dkin_dp = dkin_dp
-        self.dpot_dq = dpot_dq
+        self.dkin_dp = kin_gradient
+        self.dpot_dq = pot_gradient
         self.step_size = step_size
         self.steps = steps
 
@@ -44,14 +44,14 @@ class HamiltonLeapfrog(object):
         return q, p
 
 
-class HamiltonianUpdate(AbstractMetropolisUpdate):
+class HamiltonianUpdate(MetropolisLikeUpdate):
 
-    def __init__(self, dim, m, pot, dpot_dq, simulate):
-        super().__init__(dim)
+    def __init__(self, ndim, m, pot, dpot_dq, simulate):
+        super().__init__(ndim)
         self.m = m
         self.simulate = simulate
         self.pot = pot
-        self.dpot_dq = dpot_dq
+        self.pot_gradient = dpot_dq
 
         # artificially introduced state
         self._p_state = None
@@ -78,49 +78,6 @@ class HamiltonianUpdate(AbstractMetropolisUpdate):
 
         return q
 
-
-class HMCGaussUpdate(HamiltonianUpdate):
-    def __init__(self, dim, pot, dpot_dq, m,
-                 step_size, steps, simulation_method=HamiltonLeapfrog):
-        """ Hamilton Monte Carlo Metropolis algorithm.
-
-        The variable of interest is referred to as q, pot is the log
-        probability density.
-
-        The momentum variables are artificially introduced and not returned.
-        The momenta are sampled according to a Gaussian normal distribution
-        with variance m.
-
-        Example:
-            For a Gaussian with variance 1 the log probability is q^2/2.
-            >>> pot = lambda q: q**2 / 2
-            >>> dpot_dq = lambda q: q
-            >>> hmcm = HMCGaussUpdate(1, pot, dpot_dq, 1, 10, 1)
-            >>> hmcm.init_sampler(0.0)
-            >>> # sample 1000 points that will follow a Gaussian
-            >>> points = hmcm.sample(1000)
-
-        :param initial_q: Initial value of the variable of interest q.
-        :param dim: Dimension of the variable of interest q.
-        :param pot: The desired log probability density (of q).
-        :param dpot_dq: Partial derivative with respect to q of pot.
-        :param m: Variances of the "momentum" distribution.
-        :param steps: Number of simulation steps in the update.
-        :param step_size: Step size for the simulation method.
-        :param simulation_method: Class used to simulate the steps.
-            A custom implementation must follow that of HamiltonLeapfrog.
-        """
-        m = np.array(m, copy=False, subok=True, ndmin=1)
-        self.pot = pot
-        self.dpot_dq = dpot_dq
-
-        simulate = simulation_method(dpot_dq, self.dkin_dp, step_size, steps)
-
-        super().__init__(dim, m, pot, dpot_dq, simulate)
-
-    def dkin_dp(self, p):
-        return p / self.m  # Gaussian
-
     @property
     def step_size(self):
         return self.simulate.step_size
@@ -137,3 +94,45 @@ class HMCGaussUpdate(HamiltonianUpdate):
     def steps(self, steps):
         self.simulate.steps = steps
 
+
+class HMCGaussUpdate(HamiltonianUpdate):
+    def __init__(self, ndim, pot, pot_gradient, m,
+                 step_size, steps, simulation_method=HamiltonLeapfrog):
+        """ Hamilton Monte Carlo Metropolis algorithm.
+
+        The variable of interest is referred to as q, pot is the log
+        probability density.
+
+        The momentum variables are artificially introduced and not returned.
+        The momenta are sampled according to a Gaussian normal distribution
+        with variance m.
+
+        Example:
+            For a Gaussian with variance 1 the log probability is q^2/2.
+            >>> pot = lambda q: q**2 / 2
+            >>> pot_gradient = lambda q: q
+            >>> hmcm = HMCGaussUpdate(1, pot, pot_gradient, 1, 10, 1)
+            >>> hmcm.init_sampler(0.0)
+            >>> # sample 1000 points that will follow a Gaussian
+            >>> points = hmcm.sample(1000)
+
+        :param ndim: Dimension of the variable of interest q.
+        :param pot: The desired log probability density (of q).
+        :param pot_gradient: Partial derivative with respect to q of pot.
+        :param m: Variances of the "momentum" distribution.
+        :param steps: Number of simulation steps in the update.
+        :param step_size: Step size for the simulation method.
+        :param simulation_method: Class used to simulate the steps.
+            A custom implementation must follow that of HamiltonLeapfrog.
+        """
+        m = np.array(m, copy=False, subok=True, ndmin=1)
+        self.pot = pot
+        self.pot_gradient = pot_gradient
+
+        simulate = simulation_method(pot_gradient, self.kin_gradient,
+                                     step_size, steps)
+
+        super().__init__(ndim, m, pot, pot_gradient, simulate)
+
+    def kin_gradient(self, p):
+        return p / self.m  # Gaussian

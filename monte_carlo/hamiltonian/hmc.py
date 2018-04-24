@@ -3,7 +3,7 @@ Module implements Hamilton Monte Carlo methods for sampling.
 """
 
 import numpy as np
-from monte_carlo.markov import MetropolisLikeUpdate
+from ..core.markov import MetropolisLikeUpdate
 
 
 class HamiltonLeapfrog(object):
@@ -15,15 +15,16 @@ class HamiltonLeapfrog(object):
         H = kinetic(p) + potential(q),
         where q is the "space" and p the "momentum" variable.
 
-        :param pot_gradient: Partial derivative of the potential with respect to q.
+        :param pot_gradient: Partial derivative of the potential with
+            respect to q.
         :param kin_gradient: Partial derivative of the kinetic energy
             with respect to p.
         :param step_size: Size of a simulation step in "time"-space.
         :param steps: Number of iterations to perform in each call.
 
         """
-        self.dkin_dp = kin_gradient
-        self.dpot_dq = pot_gradient
+        self.kin_gradient = kin_gradient
+        self.pot_gradient = pot_gradient
         self.step_size = step_size
         self.steps = steps
 
@@ -38,9 +39,9 @@ class HamiltonLeapfrog(object):
         p = np.array(p_init, copy=True, ndmin=1, subok=True)
         q = np.array(q_init, copy=True, ndmin=1, subok=True)
         for i in range(self.steps):
-            p -= self.step_size / 2 * self.dpot_dq(q)
-            q += self.step_size * self.dkin_dp(p)
-            p -= self.step_size / 2 * self.dpot_dq(q)
+            p -= self.step_size / 2 * self.pot_gradient(q)
+            q += self.step_size * self.kin_gradient(p)
+            p -= self.step_size / 2 * self.pot_gradient(q)
         return q, p
 
 

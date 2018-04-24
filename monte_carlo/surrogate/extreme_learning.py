@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm as gauss
 
-from monte_carlo.sampling import assure_2d
+from ..util import assure_2d
 
 
 class FunctionBasis(object):

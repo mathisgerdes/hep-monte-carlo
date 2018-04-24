@@ -6,9 +6,9 @@ expensive to evaluate.
 
 import numpy as np
 
-from monte_carlo.markov import MetropolisUpdate, MixingMarkovUpdate
-from monte_carlo.integration import MonteCarloMultiImportance
-from monte_carlo.hmc import HMCGaussUpdate
+from ..core.markov import MetropolisUpdate, MixingMarkovUpdate
+from ..core.integration import MonteCarloMultiImportance
+from ..hamiltonian import HMCGaussUpdate
 
 
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)

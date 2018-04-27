@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm as gauss
 
-from ..util import assure_2d
+from ..core.util import assure_2d
 
 
 class FunctionBasis(object):

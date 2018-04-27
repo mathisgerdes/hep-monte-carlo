@@ -31,7 +31,7 @@ class AbstractMC3(object):
 
         self.sample_is = MetropolisUpdate(
             ndim, self.fn,
-            proposal=lambda _: self.channels.sample(1)[0],
+            proposal=lambda _: self.channels.rvs(1)[0],
             proposal_pdf=lambda _, c: self.channels.pdf(c))
 
         self.sample_local = sample_local

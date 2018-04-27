@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from ..util import assure_2d
+from .densities import Distribution
 
 
 class ChannelSample(object):
@@ -57,25 +57,27 @@ class ChannelSample(object):
         self.sample_weights = sample_weights
 
 
-class Channels(object):
-    def __init__(self, channels_sampling, channels_pdf, channels_weight=None):
+class MultiChannel(Distribution):
+
+    def __init__(self, channels, channels_weight=None):
         """ Channels construct for multi channel Monte Carlo.
 
         Contains several importance sampling channels (distributions and
         sampling methods) with respective weights and provides overall sampling
         and distribution functions.
 
-        :param channels_sampling: Array of sampling functions for each of
-            the channels.
-        :param channels_pdf: Array of distributions for each of the sampling
-            methods in sampling_channels.
+        :param channels: List of distributions.
         :param channels_weight: Initial weight of the channels. By default
             assign equal weight to all channels.
         """
-        assert len(channels_sampling) == len(channels_pdf), \
-            "Need a pdf for each sampling function."
+        ndim = channels[0].ndim
+        for c in channels:
+            if c.ndim != ndim:
+                raise RuntimeError("Not all channels have the same ndim.")
 
-        self.count = len(channels_sampling)
+        super().__init__(ndim)
+
+        self.count = len(channels)
         if channels_weight is not None:
             self.channels_weight = channels_weight
         else:
@@ -83,8 +85,8 @@ class Channels(object):
             self.channels_weight = np.ones(self.count) / self.count
         # keep the original channel weights to allow reset
         self.init_channel_weights = np.copy(self.channels_weight)
-        self.sampling_channels = channels_sampling
-        self.channel_pdfs = channels_pdf
+
+        self.channels = channels
 
         # later store information of generated sample
         self.current_sample = None  # ChannelSample
@@ -93,19 +95,25 @@ class Channels(object):
         """ Revert weights to initial values. """
         self.channels_weight[:] = self.init_channel_weights
 
-    def pdf(self, *x):
+    def pdf(self, xs):
         """  Overall probability of sample points x.
 
         Returns overall probability density of sampling a given point x:
         sum_i channel_weight_i * channel_pdf_i(x)
 
-        :param x: Total of self.ndim numpy array of equal lengths N.
+        :param xs: Total of self.ndim numpy array of equal lengths N.
         :return: Probabilities for each sample point. Numpy array
             of length N.
         """
         p = 0
         for i in range(self.count):
-            p += self.channels_weight[i] * self.channel_pdfs[i](*x)
+            p += self.channels_weight[i] * self.channels[i].pdf(xs)
+        return p
+
+    def pdf_gradient(self, xs):
+        p = 0
+        for i in range(self.count):
+            p += self.channels_weight[i] * self.channels[i].pdf_gradient(xs)
         return p
 
     def plot_pdf(self, label="total pdf"):
@@ -114,7 +122,7 @@ class Channels(object):
         y = [self.pdf(xi) for xi in x]
         plt.plot(x, y, label=label)
 
-    def sample(self, sample_size, return_sizes=False):
+    def rvs(self, sample_size, return_sizes=False):
         """ Generate a sample, using each channel with the given weight.
 
         To generate one point in the sample, a channel is chosen with
@@ -133,7 +141,7 @@ class Channels(object):
         sample_channel_indices = np.where(sample_sizes > 0)[0]
 
         sample_points = np.concatenate(
-            [assure_2d(self.sampling_channels[i](sample_sizes[i]))
+            [self.channels[i].rvs(sample_sizes[i])
              for i in sample_channel_indices])
 
         if return_sizes:
@@ -150,7 +158,7 @@ class Channels(object):
         :param sample_size: Number of sample points.
         :return: A ChannelSample object.
         """
-        sample, sample_size = self.sample(sample_size, True)
+        sample, sample_size = self.rvs(sample_size, True)
         weights = self.pdf(*sample.transpose())
         self.current_sample = ChannelSample(self.channels_weight,
                                             sample, sample_size, weights)

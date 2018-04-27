@@ -41,7 +41,7 @@ class NUTS(DualAveragingHMC):
     def buildtree(self, q, p, u, v, j, stepsize, q0, p0, Emax):
         if j == 0:
             # Base case - take one leapfrog step in the direction v.
-            q_prime, p_prime = leapfrog(q, self.target_log_pdf_gradient, p, self.momentum.log_pdf_gradient, v*stepsize, nsteps=1)
+            q_prime, p_prime = leapfrog(q, self.target_log_pdf_gradient, p, self.momentum.pot_gradient, v * stepsize, nsteps=1)
     
             dE = self.target_pdf(q_prime)/self.momentum.pdf(p_prime)
             print('dE:',dE)

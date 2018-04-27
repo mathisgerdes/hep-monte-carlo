@@ -22,12 +22,35 @@ def assure_2d(array):
     :return: If the original shape is (N,) the returned array has shape (N, 1).
         For arrays with shape (N, ndim) this function is the identity.
     """
+    array = np.array(array, copy=False, subok=True, ndmin=1)
     if array.ndim == 2:
         return array
     elif array.ndim == 1:
         return array[:, np.newaxis]
     else:
         raise RuntimeError("Array must be 1 or 2 dimensional.")
+
+
+def interpret_array(array, ndim=None):
+    array = np.array(array, copy=False, subok=True, ndmin=1)
+    if array.ndim == 2:
+        if ndim and ndim != array.shape[1]:
+            raise RuntimeWarning("Unexpected dimension of entries in array.")
+        return array
+
+    if ndim is None:
+        # can't distinguish 1D vs ND cases. Treat as 1D case
+        return array[:, np.newaxis]
+
+    if array.ndim == 1:
+        if ndim == 1:
+            # many 1D entries
+            return array[:, np.newaxis]
+        elif array.size == ndim:
+            # one ndim-dim entry
+            return array[np.newaxis, :]
+        else:
+            raise RuntimeError("Bad array shape.")
 
 
 def damped_update(old, new, damping_onset, inertia):

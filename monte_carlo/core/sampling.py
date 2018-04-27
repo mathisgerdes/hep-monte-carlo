@@ -9,7 +9,7 @@ little or nothing is known.
 
 import numpy as np
 
-from ..util import assure_2d
+from .util import assure_2d
 
 
 # ACCEPTANCE REJECTION

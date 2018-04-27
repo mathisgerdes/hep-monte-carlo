@@ -1,8 +1,8 @@
 import numpy as np
 
 from .stratified import GridVolumes
-from .channels import Channels
-from ..util import assure_2d, damped_update
+from .channels import MultiChannel
+from .util import interpret_array, damped_update
 
 
 # MONTE CARLO METHODS
@@ -42,8 +42,7 @@ class MonteCarloPlain(object):
 
 class MonteCarloImportance(object):
 
-    def __init__(self, ndim=1, sampling=None, pdf=lambda *x: 1,
-                 name="MC Importance"):
+    def __init__(self, dist, name="MC Importance"):
         """ Importance sampling Monte Carlo integration.
 
         Importance sampling replaces the uniform sample distribution of plain
@@ -53,37 +52,23 @@ class MonteCarloImportance(object):
         equivalent to plain MC.
 
         Example:
+            >>> from monte_carlo import densities
             >>> sampling = lambda size: np.random.rand(size)**2
             >>> pdf = lambda x: 2*x
-            >>> mc_imp = MonteCarloImportance(1, sampling, pdf)
+            >>> dist = densities.make_dist(1, pdf, sampling)
+            >>> mc_imp = MonteCarloImportance(1, dist)
             >>> est, err = mc_imp(lambda x: x, 1000)
             >>> est, err  # the pdf is ideal since fn(x)/(2*x) = 1/2 = const
             (0.5, 0.0)
 
-        :param ndim: Dimensionality of the integral.
-        :param sampling: Function taking a number N as argument and returning
-            that number of samples distributed according to the pdf.
-            It must return a numpy array of shape (N, ndim).
-            If ndim=1, sampling may also return an array of shape (N,) instead.
-        :param pdf: Distributions of samples used to approximate the integral.
-            The function must take ndim numpy arrays of arbitrary but equal
-            lengths. The i-th array specifies the coordinates of the
-            i-th dimension for all sample points.
+        :param dist: Distribution to use for sampling.
         :param name: Name of the method that can be used as label in
             plotting routines (can be changed to name parameters).
         """
         self.method_name = name
-        self.ndim = ndim
 
-        if sampling is None:
-            # default is a uniform distribution
-            def sampling(sample_size):
-                """ Uniform sampling of sample_size ndim-dimensional values. """
-                sample = np.random.rand(sample_size * self.ndim)
-                return sample.reshape(sample_size, self.ndim)
-
-        self.sampling = sampling
-        self.pdf = pdf
+        self.dist = dist
+        self.ndim = dist.ndim
 
     def __call__(self, fn, eval_count):
         """ Approximate the integral of fn.
@@ -92,10 +77,10 @@ class MonteCarloImportance(object):
         :param eval_count: Total number of function evaluations.
         :return: Tuple (integral_estimate, error_estimate).
         """
-        x = assure_2d(self.sampling(eval_count))
-
-        y = fn(*x.transpose()) / self.pdf(*x.transpose())
-
+        x = interpret_array(self.dist.rvs(eval_count))
+        y = fn(*x.transpose())
+        y_norm = self.dist.pdf(x)
+        y = y / y_norm
         mean = np.mean(y)  # integral estimate
         var = np.var(y)    # variance of the weighted function samples
         return mean, np.sqrt(var / eval_count)
@@ -103,7 +88,7 @@ class MonteCarloImportance(object):
 
 class MonteCarloMultiImportance(object):
 
-    def __init__(self, channels: Channels, b=.5, name="MC Multi C.",
+    def __init__(self, channels: MultiChannel, b=.5, name="MC Multi C.",
                  var_weighted=False):
         """ Multi channel Monte Carlo integration.
 
@@ -121,9 +106,8 @@ class MonteCarloMultiImportance(object):
             estimate the integral.
 
         Example:
-            >>> uniform_pdf = lambda *x: 1
-            >>> uniform_sampling = lambda size: np.random.rand(size)
-            >>> channels = Channels([uniform_sampling], [uniform_pdf])
+            >>> from monte_carlo import densities
+            >>> channels = MultiChannel([densities.Uniform(1)])
             >>> mc_imp = MonteCarloMultiImportance(channels)  # same as plain MC
             >>> est, err = mc_imp(lambda x: x, [], [100], [])
 

@@ -61,6 +61,10 @@ Example:
     True
 """
 
+from . import densities
+from . import util
+
 from .integration import *
 from .sampling import *
 from .markov import *
+from .densities.base import *

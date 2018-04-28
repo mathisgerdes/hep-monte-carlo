@@ -12,6 +12,16 @@ import numpy as np
 from .util import assure_2d
 
 
+class SampleInfo(object):
+
+    def __init__(self):
+        self.ndim = 0
+        self.size = 0
+        self.var = None
+        self.mean = None
+        self.accepted = 0
+
+
 # ACCEPTANCE REJECTION
 class AcceptRejectSampler(object):
 

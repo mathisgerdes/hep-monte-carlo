@@ -1,33 +1,57 @@
 import numpy as np
+from .sampling import SampleInfo
+
+
+class StateArray(np.ndarray):
+    def __new__(cls, input_array, pdf=None):
+        obj = np.array(input_array, copy=False, subok=True, ndmin=1).view(cls)
+        obj.pdf = pdf
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return  # was called from the __new__ above
+        self.info = getattr(obj, 'info', None)
 
 
 # MARKOV CHAIN
 class AbstractMarkovUpdate(object):
-
     """ Basic update mechanism of a Markov chain. """
-    def __init__(self, ndim):
+
+    def __init__(self, ndim, is_adaptive=False):
         self.ndim = ndim
+        self.is_adaptive = is_adaptive
 
         # initialize these values with init_sampler, if needed.
         self.state = None
         self.out_mask = None
+        self.get_info = False
+        self.log_every = -1
 
-    def init_sampler(self, initial, out_mask=None):
+        # will hold information if update was used as a sampler
+        self.sample_info = None
+
+    def init_sampler(self, initial, out_mask=None,
+                     get_info=False, log_every=5000):
         """ Initialize a sampler given the update this object specifies.
 
         :param initial: Initial value of the Markov chain. Internally
             converted to numpy array.
         :param out_mask: Slice object, return only this slice of the output
             chain (useful if sampler uses artificial variables).
+        :param get_info: If true, compute the acceptance rate.
+        :param log_every: Print the number of generated samples. Do not log if
+            value is < 0. Log every sample for log=1.
         """
-        initial = np.array(initial, copy=False, subok=True, ndmin=1)
-        if len(initial) != self.ndim:
-            raise ValueError("initial must be of dimension self.ndim=" +
+        self.state = StateArray(initial)
+        if len(self.state) != self.ndim:
+            raise ValueError("initial must be of dimension self.ndim = " +
                              str(self.ndim))
-        self.state = initial
         self.out_mask = out_mask
+        self.get_info = get_info
+        self.log_every = log_every
 
-    def next_state(self, state):
+    def next_state(self, state, iteration):
         """ Get the next state in the Markov chain.
 
         Depends on self.state, but must not change it.
@@ -36,57 +60,93 @@ class AbstractMarkovUpdate(object):
         """
         raise NotImplementedError("AbstractMarkovUpdate is abstract.")
 
-    def sample(self, sample_size=1, return_accept_rate=False, log=5000):
+    def sample(self, sample_size, initial=None):
         """ Generate a sample of given size.
 
         :param sample_size: Number of samples to generate.
-        :param return_accept_rate: If true, compute the acceptance rate.
-        :param log: Print the number of generated samples. Do not log if
-            value is < 0. Log every sample for log=1.
+        :param initial: Optional initial state of the chain. Replaces one
+            set via init_sampler.
         :return: Numpy array with shape (sample_size, self.ndim).
-            If get_accept_rate is true, return a tuple of the array and
-            the acceptance rate of the Metropolis algorithm in this run.
         """
         # check if sampler was initialized
-        if self.state is None:
-            raise RuntimeError("Call init_sampler before sampling according "
-                               "to a Markov update.")
+        if initial is not None:
+            self.state = StateArray(initial)
+        elif self.state is None:
+            raise RuntimeError("Call init_sampler before sampling "
+                               "or pass an initial state.")
+
+        # only used if self.get_info is true.
+        self.sample_info = SampleInfo()
+        if self.get_info:
+            self.sample_info.ndim = self.ndim
+            self.sample_info.size = sample_size
 
         chain = np.empty((sample_size, self.ndim))
+        chain[0] = self.state
 
-        # only used if return_accept_rate is true.
-        accepted = 0
+        for i in range(1, sample_size):
+            self.state = self.next_state(self.state, i)
+            if self.get_info and not np.array_equal(self.state, chain[i - 1]):
+                self.sample_info.accepted += 1
 
-        for i in range(sample_size):
-            next_state = self.next_state(self.state)
-            if return_accept_rate and not np.array_equal(next_state, self.state):
-                accepted += 1
-            chain[i] = self.state = next_state
-            if log > 0 and (i+1) % log == 0:
-                print("Generated %d samples." % (i+1))
+            chain[i] = self.state
+
+            if self.log_every > 0 and (i + 1) % self.log_every == 0:
+                print("Generated %d samples." % (i + 1))
 
         if self.out_mask is not None:
             chain = chain[:, self.out_mask]
 
-        if return_accept_rate:
-            return chain, accepted / sample_size
+        if self.get_info:
+            self.sample_info.mean = np.mean(chain, axis=0)
+            self.sample_info.var = np.var(chain, axis=0)
+
         return chain
 
 
 # METROPOLIS (HASTING) UPDATES
-class MetropolisLikeUpdate(AbstractMarkovUpdate):
-    """ Generic abstract class to represent a single Metropolis-like update.
-    """
+class MetropolisUpdate(AbstractMarkovUpdate):
+
+    def __init__(self, ndim, target_pdf, is_adaptive=False):
+        """ Generic abstract class to represent a single Metropolis-like update.
+        """
+        super().__init__(ndim, is_adaptive)
+        self.pdf = target_pdf
+
+        try:
+            # if proposal_pdf is implemented, method is Metropolis Hasting
+            self.proposal_pdf(np.zeros(ndim), np.zeros(ndim))
+            self.is_hasting = True
+        except (NotImplementedError, AttributeError):
+            self.is_hasting = False
+
+    def adapt(self, iteration, prev, state):
+        pass
 
     def accept(self, state, candidate):
-        """ This function must be implemented by child classes.
+        """ Default accept implementation for Metropolis/Hasting update.
 
         :param state: Previous state in the Markov chain.
         :param candidate: Candidate for next state.
         :return: The acceptance probability of a candidate state given the
             previous state in the Markov chain.
         """
-        raise NotImplementedError("MetropolisLikeUpdate is abstract.")
+        try:
+            if self.is_hasting:
+                return (candidate.pdf * self.proposal_pdf(candidate, state) /
+                        state.pdf * self.proposal_pdf(state, candidate))
+            else:
+                # otherwise (simpler) Metropolis update
+                return candidate.pdf / state.pdf
+        except TypeError as e:
+            # if used in mixing or composite update, previous update might
+            # not have set the pdf for the 'previous' state
+            if state.pdf is None:
+                state.pdf = self.pdf(state)
+                return self.accept(state, candidate)
+            else:
+                # other cause of error
+                raise e
 
     def proposal(self, state):
         """ A proposal generator.
@@ -97,69 +157,34 @@ class MetropolisLikeUpdate(AbstractMarkovUpdate):
         on the used algorithm.
 
         :param state: The previous state in the Markov chain.
-        :return: A candidate state.
+        :return: A candidate state of type SampleArray with pdf set.
         """
         raise NotImplementedError("MetropolisLikeUpdate is abstract.")
 
-    def next_state(self, state):
+    def proposal_pdf(self, state, candidate):
+        raise NotImplementedError("Implement for Hasting update.")
+
+    def sample(self, sample_size, initial=None):
+        if initial is not None:
+            self.state = StateArray(initial, self.pdf(initial))
+        elif self.sample is not None and self.state.pdf is None:
+            self.state.pdf = self.pdf(self.state)
+
+        return super().sample(sample_size, None)
+
+    def next_state(self, state, iteration):
         candidate = self.proposal(state)
-        accept_prob = self.accept(state, candidate)
-        if accept_prob >= 1 or np.random.rand() < accept_prob:
-            return candidate
+        accept = self.accept(state, candidate)
+
+        if accept >= 1 or np.random.rand() < accept:
+            next_state = candidate
+        else:
+            next_state = state
+
+        if self.is_adaptive:
+            self.adapt(iteration, state, next_state)
+
         return state
-
-
-class MetropolisUpdate(MetropolisLikeUpdate):
-
-    def __init__(self, ndim, target_pdf, proposal=None, proposal_pdf=None):
-        """ Use the Metropolis algorithm to generate a sample.
-
-        The dimensionality of the sample points is inferred from the length
-        of initial.
-
-        The proposal must not depend on the current state, if proposal_pdf
-        is None (in that case simple Metropolis is used). If proposal is
-        None, use Metropolis with a uniform proposal in [0,1].
-
-        Example:
-            >>> pdf = lambda x: np.sin(10*x)**2
-            >>> met = MetropolisUpdate(1, pdf)   # 1 dimensional
-            >>> met.init_sampler(0.1)            # initialize with start value
-            >>> sample = met.sample(1000)        # generate 1000 samples
-
-
-        :param target_pdf: Desired (unnormalized) probability distribution.
-        :param proposal: A proposal generator.
-            Takes the previous state as argument, but for this algorithm
-            to work must not depend on it (argument exists only for generality
-            of the implementation.)
-        """
-        super().__init__(ndim)
-
-        if proposal is None:
-            def proposal(_):
-                """ Uniform proposal generator. """
-                return np.random.rand(self.ndim)
-
-        self.is_hasting = proposal_pdf is not None
-        self._proposal = proposal
-        self._proposal_pdf = proposal_pdf
-        self._target_pdf = target_pdf
-
-    def accept(self, state, candidate):
-        """ Probability of accepting candidate as next state. """
-        if self.is_hasting:
-            return (self._target_pdf(candidate) *
-                    self._proposal_pdf(candidate, state) /
-                    self._target_pdf(state) *
-                    self._proposal_pdf(state, candidate))
-
-        # otherwise Metropolis update
-        return self._target_pdf(candidate) / self._target_pdf(state)
-
-    def proposal(self, state):
-        """ Propose a candidate state. """
-        return self._proposal(state)
 
 
 class CompositeMarkovUpdate(AbstractMarkovUpdate):
@@ -178,13 +203,13 @@ class CompositeMarkovUpdate(AbstractMarkovUpdate):
         self.masks = [None if masks is None or i not in masks else masks[i]
                       for i in range(len(updates))]
 
-    def next_state(self, state):
+    def next_state(self, state, iteration):
         for mechanism, mask in zip(self.updates, self.masks):
             if mask is None:
-                state = mechanism.next_state(state)
+                state = mechanism.next_state(state, iteration)
             else:
                 state = np.copy(state)
-                state[mask] = mechanism.next_state(state[mask])
+                state[mask] = mechanism.next_state(state[mask], iteration)
 
         return state
 
@@ -208,12 +233,75 @@ class MixingMarkovUpdate(AbstractMarkovUpdate):
             weights = np.ones(self.updates_count) / self.updates_count
         self.weights = weights
 
-    def next_state(self, state):
+    def next_state(self, state, iteration):
         index = np.random.choice(self.updates_count, p=self.weights)
         if self.masks[index] is None:
-            return self.updates[index].next_state(state)
+            return self.updates[index].next_state(state, iteration)
         else:
             mask = self.masks[index]
             state = np.copy(state)
-            state[mask] = self.updates[index].next_state(state[mask])
+            state[mask] = self.updates[index].next_state(state[mask], iteration)
             return state
+
+
+def make_metropolis(ndim, target_pdf, proposal=None, proposal_pdf=None):
+    """ Use the Metropolis algorithm to generate a sample.
+
+    The dimensionality of the sample points is inferred from the length
+    of initial.
+
+    The proposal must not depend on the current state, if proposal_pdf
+    is None (in that case simple Metropolis is used). If proposal is
+    None, use Metropolis with a uniform proposal in [0,1].
+
+    Example:
+        >>> pdf = lambda x: np.sin(10*x)**2
+        >>> met = make_metropolis(1, pdf)   # 1 dimensional
+        >>> met.init_sampler(0.1)            # initialize with start value
+        >>> sample = met.sample(1000)        # generate 1000 samples
+
+    :param ndim: Dimensionality of sample space.
+    :param target_pdf: Desired (unnormalized) probability distribution.
+    :param proposal: A proposal generator. Take one or zero arguments.
+        First argument is previous state. If it is used, and proposal is not
+        symmetric, proposal_pdf must be passed.
+    :param proposal_pdf: Function taking two arguments, previous and candidate
+        state, and returns the conditional probability of proposing that
+        candidate. Pass None (default) if the proposal is symmetric.
+    """
+    update = MetropolisUpdate(ndim, target_pdf)
+    if proposal is None:
+        def _proposal(_):
+            """ Uniform proposal generator. """
+            candidate = np.random.rand(ndim)
+            return StateArray(candidate, target_pdf(candidate))
+
+        if proposal_pdf is not None:
+            raise RuntimeWarning("No proposal given, ignoring proposal_pdf")
+        prop_pdf = None
+    else:
+        try:
+            proposal()
+
+            def prop(_):
+                return proposal()
+
+        except TypeError:
+            prop = proposal
+
+        def _proposal(state):
+            """ Modified proposal """
+            candidate = prop(state)
+            return StateArray(candidate, target_pdf(candidate))
+
+        try:
+            proposal_pdf(np.zeros(ndim))
+
+            def prop_pdf(_, candidate):
+                return proposal_pdf(candidate)
+        except TypeError:
+            prop_pdf = proposal_pdf
+
+    update.proposal = _proposal
+    update.proposal_pdf = prop_pdf
+    return update

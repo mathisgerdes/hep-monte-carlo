@@ -3,7 +3,7 @@ Module implements Hamilton Monte Carlo methods for sampling.
 """
 
 import numpy as np
-from ..core.markov import MetropolisLikeUpdate
+from ..core.markov import MetropolisUpdate
 
 
 class HamiltonLeapfrog(object):
@@ -45,7 +45,7 @@ class HamiltonLeapfrog(object):
         return q, p
 
 
-class HamiltonianUpdate(MetropolisLikeUpdate):
+class HamiltonianUpdate(MetropolisUpdate):
 
     def __init__(self, ndim, m, pot, dpot_dq, simulate):
         super().__init__(ndim)

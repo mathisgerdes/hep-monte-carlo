@@ -60,18 +60,25 @@ class Distribution(Density):
         raise NotImplementedError()
 
 
-def make_dist(ndim, pdf, sampling, pdf_gradient=None):
-    dist = Distribution(ndim)
+def make_dist(ndim, pdf, sampling=None, pdf_gradient=None):
+    if sampling is None:
+        dist = Density(ndim)
+    else:
+        dist = Distribution(ndim)
+        dist.rvs = lambda count: interpret_array(sampling(count), ndim)
+
     dist.pdf = lambda xs: pdf(xs).flatten()
-    dist.rvs = lambda count: interpret_array(sampling(count), ndim)
     if pdf_gradient is not None:
         dist.pdf_gradient = pdf_gradient
     return dist
 
 
-def make_dist_vect(ndim, pdf_vect, sampling):
-    dist = Distribution(ndim)
+def make_dist_vect(ndim, pdf_vect, sampling=None):
+    if sampling is None:
+        dist = Density(ndim)
+    else:
+        dist = Distribution(ndim)
+        dist.rvs = lambda count: interpret_array(sampling(count), ndim)
     dist.__call__ = lambda *xs: pdf_vect(*xs).flatten()
     dist.pdf = lambda xs: pdf_vect(*xs.transpose()).flatten()
-    dist.rvs = lambda count: interpret_array(sampling(count), ndim)
     return dist

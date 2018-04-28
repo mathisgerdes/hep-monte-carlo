@@ -6,15 +6,15 @@ expensive to evaluate.
 
 import numpy as np
 
-from ..core.markov import MetropolisUpdate, MixingMarkovUpdate
+from ..core.markov import make_metropolis, MetropolisUpdate, MixingMarkovUpdate
 from ..core.integration import MonteCarloMultiImportance
 from ..hamiltonian import HMCGaussUpdate
 
 
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)
 class AbstractMC3(object):
-    def __init__(self, ndim, fn, channels, sample_local, beta=.5):
-        """
+    def __init__(self, fn, channels, sample_local, beta=.5):
+        """ Base implementation of Multi-channel Markov chain Monte Carlo.
 
         :param ndim: Dimensionality of sample space.
         :param fn: Function to integrate and sample according to.
@@ -24,43 +24,55 @@ class AbstractMC3(object):
             The importance sampling Metropolis update is chosen with probability
             beta. Value must be between 0 and 1.
         """
-        self.ndim = ndim
+        self.ndim = channels.ndim
         self.fn = fn
         self.channels = channels
         self.mc_importance = MonteCarloMultiImportance(channels)
 
-        self.sample_is = MetropolisUpdate(
-            ndim, self.fn,
-            proposal=lambda _: self.channels.rvs(1)[0],
-            proposal_pdf=lambda _, c: self.channels.pdf(c))
+        self.sample_is = make_metropolis(
+            self.ndim, self.fn, self.channels.proposal, self.channels.pdf)
 
         self.sample_local = sample_local
 
         updates = [self.sample_is, self.sample_local]
-        self.mixing_sampler = MixingMarkovUpdate(ndim, updates)
+        self.mixing_sampler = MixingMarkovUpdate(self.ndim, updates)
         self.beta = beta
 
         self.int_est, self.int_err = None, None  # store integration results
 
-    def integrate(self, *sample_sizes):
+    def integrate(self, *eval_sizes):
         """ Execute multi channel integration and optimization.
 
-        :param sample_sizes: Tuple of three lists of integers, giving the
+        :param eval_sizes: Tuple of three lists of integers, giving the
             sample sizes of each iteration of the three phases of multi channel
             importance sampling (see MonteCarloMultiImportance).
         :return: The integral and error approximates.
         """
-        self.int_est, self.int_err = self.mc_importance(self.fn, *sample_sizes)
+        self.int_est, self.int_err = self.mc_importance(self.fn, *eval_sizes)
         return self.int_est, self.int_err
 
-    def sample(self, sample_size):
+    def sample(self, sample_size, initial=None, **kwargs):
         """ Generate a sample according to the function self.fn using MC3.
 
         Call only after mixing_sampler has been initialized (see __call__).
 
         :param sample_size: Number of samples to generate.
+        :param initial: Initial value in Markov chain.
         :return: Numpy array of shape (sample_size, self.ndim).
         """
+        # try to find an initial value
+        if initial is None:
+            it = 0
+            while it < 1000:
+                initial = self.sample_is.proposal(None)
+                if self.fn(initial) != 0:
+                    break
+            if self.fn(initial) == 0:
+                raise RuntimeError("Could not find a suitable initial value "
+                                   "using the multi channel distribution.")
+
+        self.mixing_sampler.init_sampler(initial, **kwargs)
+
         return self.mixing_sampler.sample(sample_size)
 
     @property
@@ -71,46 +83,36 @@ class AbstractMC3(object):
     def beta(self, beta):
         self.mixing_sampler.weights = np.array([beta, 1 - beta])
 
-    def __call__(self, integration_sample_sizes, sample_size, initial=None):
+    def __call__(self, eval_sizes, sample_size, initial=None, **kwargs):
         """ Execute MC3 algorithm; integration phase followed by sampling.
 
-        :param integration_sample_sizes: Tuple of three lists of integers,
+        :param eval_sizes: Tuple of three lists of integers,
             giving the sample sizes of each iteration of the three phases of
             multi channel importance sampling (see MonteCarloMultiImportance).
         :param sample_size: Number of samples to generate
+        :param initial: Initial value in Markov chain.
         :return: Numpy array of shape (sample_size, self.ndim). The sample
             generated, following the distribution self.fn.
         """
-        self.integrate(*integration_sample_sizes)
+        self.integrate(*eval_sizes)
 
-        # try to find an initial value
-        if initial is None:
-            it = 0
-            while it < 1000:
-                initial = self.sample_is.proposal(None)
-                if self.fn(initial) != 0:
-                    break
-            if self.fn(initial) == 0:
-                raise RuntimeError("Could not find a suitable initial value"
-                                   "using the multi channel distribution.")
-
-        self.mixing_sampler.init_sampler(initial)
-        return self.sample(sample_size)
+        return self.sample(sample_size, initial, **kwargs)
 
 
 class MC3Uniform(AbstractMC3):
 
-    def __init__(self, ndim, fn, channels, delta, beta=.5):
+    def __init__(self, fn, channels, delta, beta=.5):
 
-        sample_local = MetropolisUpdate(ndim, fn, self.generate_local)
-        super().__init__(ndim, fn, channels, sample_local, beta)
+        sample_local = make_metropolis(channels.ndim, fn, self.generate_local)
+        super().__init__(fn, channels, sample_local, beta)
 
         if np.ndim(delta) == 0:
-            delta = np.ones(ndim) * delta
-        elif len(delta) == ndim:
+            delta = np.ones(self.ndim) * delta
+        elif len(delta) == self.ndim:
             delta = np.array(delta)
         else:
-            raise ValueError("delta must a float or an array of length ndim.")
+            raise ValueError("delta must be a float or an array of "
+                             "length ndim.")
         self.delta = delta
 
     def generate_local(self, state):
@@ -130,13 +132,12 @@ class MC3Uniform(AbstractMC3):
 
 class MC3Hamilton(AbstractMC3):
 
-    def __init__(self, ndim, fn, channels, dpot_dq, m, step_size, steps,
-                 beta=.5):
+    def __init__(self, fn, channels, dpot_dq, m, step_size, steps, beta=.5):
 
-        sample_local = HMCGaussUpdate(ndim, lambda *x: -np.log(fn(*x)),
+        sample_local = HMCGaussUpdate(channels.ndim, lambda *x: -np.log(fn(*x)),
                                       dpot_dq, m, step_size, steps)
 
-        super().__init__(ndim, fn, channels, sample_local, beta)
+        super().__init__(fn, channels, sample_local, beta)
 
     @property
     def step_size(self):

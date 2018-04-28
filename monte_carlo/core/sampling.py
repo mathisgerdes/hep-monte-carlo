@@ -21,6 +21,10 @@ class SampleInfo(object):
         self.mean = None
         self.accepted = 0
 
+    @property
+    def accept_ratio(self):
+        return self.accepted / self.size
+
 
 # ACCEPTANCE REJECTION
 class AcceptRejectSampler(object):

@@ -6,9 +6,10 @@ expensive to evaluate.
 
 import numpy as np
 
-from ..core.markov import make_metropolis, MetropolisUpdate, MixingMarkovUpdate
+from ..core.densities import Gaussian
+from ..core.markov import make_metropolis, MixingMarkovUpdate
 from ..core.integration import MonteCarloMultiImportance
-from ..hamiltonian import HMCGaussUpdate
+from ..hamiltonian import HamiltonianUpdate
 
 
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)
@@ -67,7 +68,7 @@ class AbstractMC3(object):
                 initial = self.sample_is.proposal(None)
                 if self.fn(initial) != 0:
                     break
-            if self.fn(initial) == 0:
+            if self.fn(*initial) == 0:
                 raise RuntimeError("Could not find a suitable initial value "
                                    "using the multi channel distribution.")
 
@@ -132,12 +133,13 @@ class MC3Uniform(AbstractMC3):
 
 class MC3Hamilton(AbstractMC3):
 
-    def __init__(self, fn, channels, dpot_dq, m, step_size, steps, beta=.5):
+    def __init__(self, target_density, channels, m, steps, step_size, beta=.5):
 
-        sample_local = HMCGaussUpdate(channels.ndim, lambda *x: -np.log(fn(*x)),
-                                      dpot_dq, m, step_size, steps)
+        self.p_dist = Gaussian(channels.ndim, scale=m)
+        sample_local = HamiltonianUpdate(
+            target_density, self.p_dist, steps, step_size)
 
-        super().__init__(fn, channels, sample_local, beta)
+        super().__init__(target_density, channels, sample_local, beta)
 
     @property
     def step_size(self):
@@ -154,3 +156,11 @@ class MC3Hamilton(AbstractMC3):
     @steps.setter
     def steps(self, steps):
         self.sample_local.steps = steps
+
+    @property
+    def m(self):
+        return np.sqrt(self.p_dist.cov)
+
+    @m.setter
+    def m(self, value):
+        self.p_dist.cov = value ** 2

@@ -3,15 +3,17 @@ from .sampling import SampleInfo
 
 
 class StateArray(np.ndarray):
-    def __new__(cls, input_array, pdf=None):
+    def __new__(cls, input_array, pdf=None, momentum=None):
         obj = np.array(input_array, copy=False, subok=True, ndmin=1).view(cls)
         obj.pdf = pdf
+        obj.momentum = momentum
         return obj
 
     def __array_finalize__(self, obj):
         if obj is None:
             return  # was called from the __new__ above
-        self.info = getattr(obj, 'info', None)
+        self.pdf = getattr(obj, 'pdf', None)
+        self.momentum = getattr(obj, 'momentum', None)
 
 
 # MARKOV CHAIN
@@ -184,7 +186,7 @@ class MetropolisUpdate(AbstractMarkovUpdate):
         if self.is_adaptive:
             self.adapt(iteration, state, next_state)
 
-        return state
+        return next_state
 
 
 class CompositeMarkovUpdate(AbstractMarkovUpdate):
@@ -256,7 +258,7 @@ def make_metropolis(ndim, target_pdf, proposal=None, proposal_pdf=None):
 
     Example:
         >>> pdf = lambda x: np.sin(10*x)**2
-        >>> met = make_metropolis(1, pdf)   # 1 dimensional
+        >>> met = make_metropolis(1, pdf)    # 1 dimensional
         >>> met.init_sampler(0.1)            # initialize with start value
         >>> sample = met.sample(1000)        # generate 1000 samples
 

@@ -27,7 +27,7 @@ class UnconstrainedCamel(Density):
 
         pdf_a = multivariate_normal.pdf(xs, mean=mu_a, cov=self.cov)
         pdf_b = multivariate_normal.pdf(xs, mean=mu_b, cov=self.cov)
-        return (pdf_a + pdf_b) / 2
+        return np.atleast_1d(pdf_a + pdf_b).flatten() / 2
     
     def pdf_gradient(self, xs):
         xs = interpret_array(xs, self.ndim)
@@ -57,7 +57,7 @@ class Camel(UnconstrainedCamel):
         res[in_bounds] = super().pdf(xs[in_bounds])
         res[np.logical_not(in_bounds)] = 0
 
-        return res
+        return res.flatten()
 
     def pdf_gradient(self, xs):
         xs = interpret_array(xs, self.ndim)

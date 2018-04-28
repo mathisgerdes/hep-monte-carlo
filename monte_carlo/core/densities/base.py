@@ -29,7 +29,7 @@ class Density(object):
         res = np.empty(xs.shape)
 
         # compute where pdf is != 0
-        nonzero = np.all(xs != 0, axis=1)
+        nonzero = (pdf != 0).flatten()
         pdf_grad = self.pdf_gradient(xs[nonzero])
         res[nonzero] = -pdf_grad / pdf[nonzero]
 

@@ -17,7 +17,9 @@ class Gaussian(Distribution):
             if scale is None:
                 self.cov = 1
             else:
-                self.cov = np.atleast_1d(scale) ** 2
+                if not np.isscalar(scale):
+                    scale = np.atleast_1d(scale)
+                self.cov = scale ** 2
         else:
             self.cov = cov
             if scale is not None:

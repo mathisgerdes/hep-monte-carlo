@@ -48,11 +48,8 @@ class HamiltonTest(TestCase):
 
     def test_gauss(self):
         s = 1
-        dh_dq = lambda q: q
-        pdf = lambda x: np.exp(-x ** 2 / 2 / s ** 2) / np.sqrt(
-            2 * np.pi * s ** 2)
         # hamilton monte carlo
-        density = densities.make_dist(1, pdf, pdf_gradient=dh_dq)
+        density = Gaussian(1)
         momentum_dist = densities.Gaussian(1, scale=1)
         hmcm = HamiltonianUpdate(density, momentum_dist, steps=10, step_size=1)
         hmcm.init_sampler(0., get_info=True)

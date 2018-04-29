@@ -7,14 +7,16 @@ class Density(object):
 
     def __init__(self, ndim, is_symmetric=None):
         self.ndim = ndim
-        self.is_symmetric=is_symmetric
+        self.is_symmetric = is_symmetric
 
     def __call__(self, *xs):
-        try:
-            return self.pdf(np.stack(xs, axis=1))
-        except np.AxisError:
-            # xs must be numbers
+        if np.isscalar(xs[0]):
+            # xs are numbers
             return self.pdf(np.stack(xs, axis=0))
+        else:
+            shape = np.asanyarray(xs[0]).shape
+            xs = [np.asanyarray(x).flatten() for x in xs]
+            return self.pdf(np.stack(xs, axis=1)).reshape(shape)
 
     def pot(self, xs):
         with np.errstate(divide='ignore'):

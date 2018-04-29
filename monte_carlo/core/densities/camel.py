@@ -2,7 +2,7 @@ from .base import Density
 from scipy.stats import multivariate_normal
 import numpy as np
 
-from ..util import interpret_array
+from ..util import interpret_array, hypercube_bounded
 
 
 class UnconstrainedCamel(Density):
@@ -48,16 +48,9 @@ class Camel(UnconstrainedCamel):
     """
     sum of two gaussians on a [0, 1] hypercube
     """
+    @hypercube_bounded(1, self_has_ndim=True)
     def pdf(self, xs):
-        xs = interpret_array(xs, self.ndim)
-
-        in_bounds = np.all((0 < xs) * (xs < 1), axis=1)
-
-        res = np.empty(xs.shape[0])
-        res[in_bounds] = super().pdf(xs[in_bounds])
-        res[np.logical_not(in_bounds)] = 0
-
-        return res.flatten()
+        return super().pdf(xs).flatten()
 
     def pdf_gradient(self, xs):
         xs = interpret_array(xs, self.ndim)

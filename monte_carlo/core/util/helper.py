@@ -70,3 +70,34 @@ def damped_update(old, new, damping_onset, inertia):
     """
     return (new * damping_onset / (inertia + 1 + damping_onset) +  # old
             old * (inertia + 1) / (inertia + 1 + damping_onset))   # new
+
+
+def hypercube_bounded(index, null_value=0, shape=lambda xs: xs.shape[0],
+                      self_has_ndim=False):
+    """ Use as decorator if a function only returns none-null results [0,1]^dim.
+
+    Includes performing interpret_array on xs.
+
+    :param index: Index of the relevant value array xs.
+    :param null_value: Value to set array to where xs==0.
+    :param shape: Expression to get the return array shape given xs.
+    :param self_has_ndim: True if the first funciton argument is self and
+        self has the attribute ndim.
+    :return: Numpy array with appropriate null-values and function values.
+    """
+    def get_bounded(fn):
+        def fn_bounded(*args, **kwargs):
+            xs = args[index]
+            xs = interpret_array(xs, args[0].ndim if self_has_ndim else None)
+
+            in_bounds = np.all((0 < xs) * (xs < 1), axis=1)
+
+            res = np.empty(shape(xs))
+            res[in_bounds] = fn(*args[:index], xs[in_bounds],
+                                *args[index+1:], **kwargs)
+            res[np.logical_not(in_bounds)] = null_value
+
+            return res
+
+        return fn_bounded
+    return get_bounded

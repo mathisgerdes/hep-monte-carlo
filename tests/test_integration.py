@@ -62,7 +62,7 @@ class TestStratMC(TestCase):
     def test_linear(self):
         # Divide the integration space into 4 equally sized partitions with a
         # base number of 10 sample points in each volume.
-        volumes = GridVolumes(ndim=1, divisions=4, default_count=10)
+        volumes = GridVolumes(ndim=1, divisions=4, default_base_count=10)
         mc_strat = MonteCarloStratified(volumes=volumes)
         # Stratified sampling expects a multiple instead of a total sample size.
         est, err = mc_strat(lambda x: x, 5)  # 5 * 10 sample points per region
@@ -70,7 +70,7 @@ class TestStratMC(TestCase):
         self.assertLess(err, 0.1)
 
     def test_interface(self):
-        volumes = GridVolumes(ndim=1, divisions=4, default_count=100)
+        volumes = GridVolumes(ndim=1, divisions=4, default_base_count=100)
         mc_strat = MonteCarloStratified(volumes=volumes)
         mc_strat = mc_strat.get_interface_infer_multiple()
         est, err = mc_strat(lambda x: x, 4000)  # multiple is 4000/(4*100) = 40

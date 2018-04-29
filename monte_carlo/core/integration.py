@@ -274,7 +274,7 @@ class MonteCarloStratified(object):
         """ Construct an interface that only takes fn and a total sample size.
 
         If the sample size is not an integer multiple of
-        self.volumes.total_base_size, the actual number of function evaluations
+        self.volumes.total_base_count, the actual number of function evaluations
         might be lower than N.
         """
         def interface(fn, eval_count):
@@ -286,7 +286,7 @@ class MonteCarloStratified(object):
             :param eval_count: Total number of function evaluations.
             :return: Tuple (integral_estimate, error_estimate).
             """
-            return self(fn, eval_count / self.volumes.total_base_size)
+            return self(fn, eval_count / self.volumes.total_base_count)
 
         interface.method_name = self.method_name
 
@@ -298,7 +298,7 @@ class MonteCarloStratified(object):
         :param fn: Integrand.
         :param multiple: Multiply the base sample size of each region with this
             number. The total number of function evaluations will then be
-            multiple * self.volumes.total_base_size.
+            multiple * self.volumes.total_base_count.
         :return: Tuple (integral_estimate, error_estimate).
         """
         int_est = 0
@@ -329,7 +329,6 @@ class MonteCarloVEGAS(object):
             are correlated.
         """
         # the configuration is defined by the sizes of the bins
-        self.sizes = np.ones((ndim, divisions)) / divisions
         self.ndim = ndim
         self.volumes = GridVolumes(ndim=ndim, divisions=divisions)
         # number of bins along each axis
@@ -366,21 +365,11 @@ class MonteCarloVEGAS(object):
 
         return interface
 
-    def choice(self):
-        """ Return the multi-index of a random bin. """
-        return np.random.randint(0, self.divisions, self.ndim)
+    def weights_at(self, indices):
+        vols = np.prod([self.volumes.sizes[d][indices[d]]
+                        for d in range(self.ndim)], axis=0)
 
-    def pdf(self, indices):
-        """ Probability density of finding a point in bin with given index. """
-        # since here N = 1 = const for all bins,
-        # the pdf is given simply by the volume of the regions
-        vol = np.prod([self.sizes[d][indices[d]] for d in range(self.ndim)],
-                      axis=0)
-        return 1 / self.divisions ** self.ndim / vol
-
-    def plot_pdf(self):
-        """ Plot the pdf resulting from the current bin sizes. """
-        self.volumes.plot_pdf(label="VEGAS pdf")
+        return vols * self.volumes.partition_count
 
     def __call__(self, fn, sub_eval_count, iterations, apriori=True, chi=False):
         """ Approximate the integral of fn using stratified sampling.
@@ -396,8 +385,7 @@ class MonteCarloVEGAS(object):
         """
         if apriori:
             # start anew
-            self.sizes = np.ones((self.ndim, self.divisions)) / self.divisions
-            self.volumes.update_bounds_from_sizes(self.sizes)
+            self.volumes.reset()
 
         assert not chi or iterations > 1, "Can only compute chi^2 if there" \
                                           "is more than one iteration "
@@ -409,19 +397,19 @@ class MonteCarloVEGAS(object):
 
         for j in range(iterations):
             indices = self.volumes.random_bins(sub_eval_count)
-            samples_t = self.volumes.sample(indices)
-            values = fn(*samples_t) / self.pdf(indices)
+            samples_t = self.volumes.sample_indices(indices)
+            values = fn(*samples_t) * self.weights_at(indices)
             for div in range(self.divisions):
                 estimates[:, div] = np.mean(values * (indices == div), axis=1)
             est_j[j] = np.mean(values)
             var_j[j] = np.var(values) / sub_eval_count
 
-            inv_sizes = damped_update(est_j[j] / self.sizes,
+            inv_sizes = damped_update(est_j[j] / self.volumes.sizes,
                                       self.divisions * estimates, self.c, j)
-            self.sizes = 1 / inv_sizes
+            sizes = 1 / inv_sizes
             # normalize
-            self.sizes /= np.add.reduce(self.sizes, axis=1)[:, np.newaxis]
-            self.volumes.update_bounds_from_sizes(self.sizes)
+            sizes /= np.add.reduce(sizes, axis=1)[:, np.newaxis]
+            self.volumes.sizes = sizes
 
         # note: weighting with sub_eval_count here is redundant,
         # but illustrates how this algorithm could be expanded

@@ -2,7 +2,7 @@ import numpy as np
 from .hmc import HamiltonianUpdate
 
 
-class DualAveragingHMC(HamiltonianUpdate):
+class DualAveragingHMCUpdate(HamiltonianUpdate):
     """
     Adapts the stepsize by dual averaging
     """
@@ -114,7 +114,7 @@ class DualAveragingHMC(HamiltonianUpdate):
         return step_size
 
     def adapt(self, t, prev, current, accept):
-        if self.adapt_schedule(t) is True:
+        if self.adapt_schedule(t):
             self.Hbar = (1 - 1 / (t + self.t0)) * self.Hbar + 1 / (
                          t + self.t0) * (self.delta - accept)
             log_step_size = self.mu - np.sqrt(t) / self.gamma * self.Hbar

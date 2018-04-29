@@ -67,7 +67,23 @@ class HamiltonDualAvTest(TestCase):
         # hamilton monte carlo
         density = densities.make_dist(1, pdf, pdf_gradient=dh_dq)
         momentum_dist = densities.Gaussian(1, scale=1)
-        hmcm = DualAveragingHMC(density, momentum_dist, 1, lambda t: t < 10)
+        hmcm = DualAveragingHMCUpdate(density, momentum_dist, 1, lambda t: t < 10)
+        hmcm.init_sampler(0., get_info=True)
+        res = hmcm.sample(100)
+        self.assertEqual((100, 1), res.shape)
+
+
+class HamiltonNUTSTest(TestCase):
+
+    def test_gauss(self):
+        s = 1
+        dh_dq = lambda q: q
+        pdf = lambda x: np.exp(-x ** 2 / 2 / s ** 2) / np.sqrt(
+            2 * np.pi * s ** 2)
+        # hamilton monte carlo
+        density = densities.make_dist(1, pdf, pdf_gradient=dh_dq)
+        momentum_dist = densities.Gaussian(1, scale=1)
+        hmcm = NUTSUpdate(density, momentum_dist, lambda t: t < 10)
         hmcm.init_sampler(0., get_info=True)
         res = hmcm.sample(100)
         self.assertEqual((100, 1), res.shape)

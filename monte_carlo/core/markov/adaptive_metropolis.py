@@ -1,5 +1,5 @@
 import numpy as np
-from .base import MetropolisUpdate, StateArray
+from .base import MetropolisUpdate, MetropolisState
 
 
 class AdaptiveMetropolisUpdate(MetropolisUpdate):
@@ -24,7 +24,7 @@ class AdaptiveMetropolisUpdate(MetropolisUpdate):
 
     def proposal(self, state):
         prop = self.proposal_dist.proposal()
-        return StateArray(prop, pdf=self.pdf(prop))
+        return MetropolisState(prop, pdf=self.pdf(prop))
 
     def proposal_pdf(self, state, candidate):
         return self.proposal_dist(candidate)

@@ -23,6 +23,7 @@ class Uniform(Distribution):
         return np.zeros(xs.shape)
 
     def pot(self, xs):
+        xs = interpret_array(xs, self.ndim)
         logpdf = -(np.all(xs > self.sample_min, axis=1) *
                    np.all(xs < self.sample_max, axis=1) * np.log(self.vol))
         return logpdf

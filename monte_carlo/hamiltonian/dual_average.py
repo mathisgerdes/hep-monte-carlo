@@ -11,8 +11,7 @@ class DualAveragingHMCUpdate(HamiltonianUpdate):
                  adapt_schedule, t0=10, stepsize_bar0=1, Hbar0=0, gamma=0.05,
                  kappa=0.75, delta=0.65):
         # steps and step size are set later
-        super().__init__(target_density, p_dist, 1, 1.)
-        self.is_adaptive = True
+        super().__init__(target_density, p_dist, 1, 1., is_adaptive=True)
         # set later
         self.step_size_min = self.step_size_max = self.step_size
         self.nsteps_max = None
@@ -28,20 +27,14 @@ class DualAveragingHMCUpdate(HamiltonianUpdate):
         self.kappa = kappa
         self.delta = delta
 
-    def init_sampler(self, initial, **kwargs):
-        super().init_sampler(initial, **kwargs)
-        self.state.pdf = self.target_density.pdf(self.state)
-
-        self.step_size = self.find_reasonable_step_size(self.state)
+    def init_adapt(self, initial_state):
+        self.step_size = self.find_reasonable_step_size(initial_state)
         self.step_size_min = self.step_size_max = self.step_size
         # print('stepsize: ' + str(self.step_size))
 
         self.nsteps_max = int(self.simulation_length / self.step_size)
         self.nsteps_min = self.nsteps_max
-
-    def sample(self, sample_size):
         self.mu = np.log(10 * self.step_size)
-        return super().sample(sample_size)
 
     def simulate_custom(self, current, p0, steps, step_size):
         old_step_size, old_steps = self.step_size, self.steps

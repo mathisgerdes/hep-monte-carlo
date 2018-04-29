@@ -1,7 +1,7 @@
 import numpy as np
 
 from .dual_average import DualAveragingHMCUpdate
-from ..core import StateArray
+from ..core import MetropolisState
 
 
 class NUTSUpdate(DualAveragingHMCUpdate):
@@ -48,7 +48,7 @@ class NUTSUpdate(DualAveragingHMCUpdate):
             j = j + 1
 
         q_pdf = self.target_density.pdf(q)
-        return StateArray(q, pdf=q_pdf)
+        return MetropolisState(q, pdf=q_pdf)
     
     def build_tree(self, q, p, u, v, j, step_size, q0, p0, Emax):
         if j == 0:

@@ -1,6 +1,7 @@
 from samplers.mcmc.spherical_hmc import DualAveragingSphericalHMC, cot, arccot
 import numpy as np
 
+
 def integrator(q, dlogq, z, trafo, jac, stepsize, nsteps):
     cumsinq = np.cumprod(np.sin(q))
     v = z / np.concatenate(([1], cumsinq[:-1]))

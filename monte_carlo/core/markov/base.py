@@ -2,18 +2,16 @@ import numpy as np
 from ..sampling import SampleInfo
 
 
-class StateArray(np.ndarray):
-    def __new__(cls, input_array, pdf=None, momentum=None):
+class MetropolisState(np.ndarray):
+    def __new__(cls, input_array, pdf=None):
         obj = np.array(input_array, copy=False, subok=True, ndmin=1).view(cls)
         obj.pdf = pdf
-        obj.momentum = momentum
         return obj
 
     def __array_finalize__(self, obj):
         if obj is None:
             return  # was called from the __new__ above
         self.pdf = getattr(obj, 'pdf', None)
-        self.momentum = getattr(obj, 'momentum', None)
 
 
 # MARKOV CHAIN
@@ -29,9 +27,16 @@ class AbstractMarkovUpdate(object):
         self.out_mask = None
         self.get_info = False
         self.log_every = -1
+        self.re_sample = None
 
         # will hold information if update was used as a sampler
         self.sample_info = None
+
+    def init_adapt(self, initial_state):
+        pass
+
+    def init_state(self, state):
+        return state  # may initialize other state attributes (such as pdf)
 
     def init_sampler(self, initial, out_mask=None,
                      get_info=False, log_every=5000):
@@ -45,13 +50,14 @@ class AbstractMarkovUpdate(object):
         :param log_every: Print the number of generated samples. Do not log if
             value is < 0. Log every sample for log=1.
         """
-        self.state = StateArray(initial)
+        self.state = self.init_state(np.atleast_1d(initial))
         if len(self.state) != self.ndim:
             raise ValueError("initial must be of dimension self.ndim = " +
                              str(self.ndim))
         self.out_mask = out_mask
         self.get_info = get_info
         self.log_every = log_every
+        self.init_adapt(self.state)
 
     def next_state(self, state, iteration):
         """ Get the next state in the Markov chain.
@@ -78,6 +84,10 @@ class AbstractMarkovUpdate(object):
             self.sample_info.ndim = self.ndim
             self.sample_info.size = sample_size
 
+        tagged = []
+        tags = []
+        tag_parser = None
+
         chain = np.empty((sample_size, self.ndim))
         chain[0] = self.state
 
@@ -87,6 +97,12 @@ class AbstractMarkovUpdate(object):
                 self.sample_info.accepted += 1
 
             chain[i] = self.state
+            try:
+                tags.append(self.state.tag)
+                tagged.append(i)
+                tag_parser = self.state.tag_parser
+            except AttributeError:
+                pass
 
             if self.log_every > 0 and (i + 1) % self.log_every == 0:
                 print("Generated %d samples." % (i + 1))
@@ -97,6 +113,9 @@ class AbstractMarkovUpdate(object):
         if self.get_info:
             self.sample_info.mean = np.mean(chain, axis=0)
             self.sample_info.var = np.var(chain, axis=0)
+
+        if tagged:
+            chain[tagged] = tag_parser(chain[tagged], tags)
 
         return chain
 
@@ -128,22 +147,12 @@ class MetropolisUpdate(AbstractMarkovUpdate):
         :return: The acceptance probability of a candidate state given the
             previous state in the Markov chain.
         """
-        try:
-            if self.is_hasting:
-                return (candidate.pdf * self.proposal_pdf(candidate, state) /
-                        state.pdf * self.proposal_pdf(state, candidate))
-            else:
-                # otherwise (simpler) Metropolis update
-                return candidate.pdf / state.pdf
-        except TypeError as e:
-            # if used in mixing or composite update, previous update might
-            # not have set the pdf for the 'previous' state
-            if state.pdf is None:
-                state.pdf = self.pdf(state)
-                return self.accept(state, candidate)
-            else:
-                # other cause of error
-                raise e
+        if self.is_hasting:
+            return (candidate.pdf * self.proposal_pdf(candidate, state) /
+                    state.pdf * self.proposal_pdf(state, candidate))
+        else:
+            # otherwise (simpler) Metropolis update
+            return candidate.pdf / state.pdf
 
     def proposal(self, state):
         """ A proposal generator.
@@ -154,22 +163,31 @@ class MetropolisUpdate(AbstractMarkovUpdate):
         on the used algorithm.
 
         :param state: The previous state in the Markov chain.
-        :return: A candidate state of type SampleArray with pdf set.
+        :return: A candidate state of type MetropolisState with pdf set.
         """
         raise NotImplementedError("MetropolisLikeUpdate is abstract.")
 
     def proposal_pdf(self, state, candidate):
         raise NotImplementedError("Implement for Hasting update.")
 
-    def sample(self, sample_size):
-        if self.sample is not None and self.state.pdf is None:
-            self.state.pdf = self.pdf(self.state)
+    def init_state(self, state):
+        if not isinstance(state, MetropolisState):
+            state = MetropolisState(state)
+        if state.pdf is None:
+            state.pdf = self.pdf(state)
 
-        return super().sample(sample_size)
+        return super().init_state(state)
 
     def next_state(self, state, iteration):
         candidate = self.proposal(state)
-        accept = self.accept(state, candidate)
+
+        try:
+            accept = self.accept(state, candidate)
+        except (TypeError, AttributeError):
+            # in situations like mixing/composite updates, previous update
+            # may not have set necessary attributes (such as pdf)
+            state = self.init_state(state)
+            accept = self.accept(state, candidate)
 
         if accept >= 1 or np.random.rand() < accept:
             next_state = candidate
@@ -193,10 +211,16 @@ class CompositeMarkovUpdate(AbstractMarkovUpdate):
             of dimensions for the index of the update mechanism. Use this if
             some updates only affect slices of the state.
         """
-        super().__init__(ndim)
+        is_adaptive = any(update.is_adaptive for update in updates)
+        super().__init__(ndim, is_adaptive)
+
         self.updates = updates
         self.masks = [None if masks is None or i not in masks else masks[i]
                       for i in range(len(updates))]
+
+    def init_adapt(self, initial_state):
+        for update in self.updates:
+            update.init_adapt(initial_state)
 
     def next_state(self, state, iteration):
         for mechanism, mask in zip(self.updates, self.masks):
@@ -219,7 +243,9 @@ class MixingMarkovUpdate(AbstractMarkovUpdate):
         :param masks: Slice object, specify if updates only affect slice of
             state.
         """
-        super().__init__(ndim)
+        is_adaptive = any(update.is_adaptive for update in updates)
+        super().__init__(ndim, is_adaptive)
+
         self.updates = updates
         self.updates_count = len(updates)
         self.masks = [None if masks is None or i not in masks else masks[i]
@@ -227,6 +253,10 @@ class MixingMarkovUpdate(AbstractMarkovUpdate):
         if weights is None:
             weights = np.ones(self.updates_count) / self.updates_count
         self.weights = weights
+
+    def init_adapt(self, initial_state):
+        for update in self.updates:
+            update.init_adapt(initial_state)
 
     def next_state(self, state, iteration):
         index = np.random.choice(self.updates_count, p=self.weights)
@@ -269,7 +299,7 @@ def make_metropolis(ndim, target_pdf, proposal=None, proposal_pdf=None):
         def _proposal(_):
             """ Uniform proposal generator. """
             candidate = np.random.rand(ndim)
-            return StateArray(candidate, target_pdf(candidate))
+            return MetropolisState(candidate, target_pdf(candidate))
 
         if proposal_pdf is not None:
             raise RuntimeWarning("No proposal given, ignoring proposal_pdf")
@@ -287,7 +317,7 @@ def make_metropolis(ndim, target_pdf, proposal=None, proposal_pdf=None):
         def _proposal(state):
             """ Modified proposal """
             candidate = prop(state)
-            return StateArray(candidate, target_pdf(candidate))
+            return MetropolisState(candidate, target_pdf(candidate))
 
         try:
             proposal_pdf(np.zeros(ndim))

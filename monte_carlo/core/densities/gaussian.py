@@ -11,11 +11,13 @@ class Gaussian(Distribution):
         super().__init__(ndim, True)
 
         self._mu = None
+        self._cov = None
+        self._cov_inv = None
         self.mu = mu
 
         if cov is None:
             if scale is None:
-                self.cov = 1
+                self.cov = np.ones(ndim)
             else:
                 if not np.isscalar(scale):
                     scale = np.atleast_1d(scale)
@@ -40,10 +42,12 @@ class Gaussian(Distribution):
         return np.array(logpdf, copy=False, ndmin=1, subok=True)
 
     def pot_gradient(self, xs):
-        return np.atleast_1d(xs / self.cov)
+        xs = interpret_array(xs, self.ndim)
+        return np.einsum('ij,kj->ki', self._cov_inv, xs)
 
     def rvs(self, sample_size):
-        return np.random.normal(self.mu, self.cov, (sample_size, self.ndim))
+        sample = np.random.multivariate_normal(self.mu, self.cov, sample_size)
+        return sample
 
     @property
     def mu(self):
@@ -56,3 +60,12 @@ class Gaussian(Distribution):
             self._mu.fill(value)
         else:
             self._mu = np.array(value, copy=False, subok=True, ndmin=1)
+
+    @property
+    def cov(self):
+        return self._cov
+
+    @cov.setter
+    def cov(self, value):
+        self._cov = np.eye(self.ndim, self.ndim) * np.asanyarray(value)
+        self._cov_inv = np.linalg.inv(self._cov)

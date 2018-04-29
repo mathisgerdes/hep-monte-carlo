@@ -1,5 +1,5 @@
 import numpy as np
-from .sampling import SampleInfo
+from ..sampling import SampleInfo
 
 
 class StateArray(np.ndarray):
@@ -62,20 +62,15 @@ class AbstractMarkovUpdate(object):
         """
         raise NotImplementedError("AbstractMarkovUpdate is abstract.")
 
-    def sample(self, sample_size, initial=None):
+    def sample(self, sample_size):
         """ Generate a sample of given size.
 
         :param sample_size: Number of samples to generate.
-        :param initial: Optional initial state of the chain. Replaces one
-            set via init_sampler.
         :return: Numpy array with shape (sample_size, self.ndim).
         """
         # check if sampler was initialized
-        if initial is not None:
-            self.state = StateArray(initial)
-        elif self.state is None:
-            raise RuntimeError("Call init_sampler before sampling "
-                               "or pass an initial state.")
+        if self.state is None:
+            raise RuntimeError("Call init_sampler before sampling.")
 
         # only used if self.get_info is true.
         self.sample_info = SampleInfo()
@@ -122,7 +117,7 @@ class MetropolisUpdate(AbstractMarkovUpdate):
         except (NotImplementedError, AttributeError):
             self.is_hasting = False
 
-    def adapt(self, iteration, prev, state):
+    def adapt(self, iteration, prev, state, accept):
         pass
 
     def accept(self, state, candidate):
@@ -166,13 +161,11 @@ class MetropolisUpdate(AbstractMarkovUpdate):
     def proposal_pdf(self, state, candidate):
         raise NotImplementedError("Implement for Hasting update.")
 
-    def sample(self, sample_size, initial=None):
-        if initial is not None:
-            self.state = StateArray(initial, self.pdf(initial))
-        elif self.sample is not None and self.state.pdf is None:
+    def sample(self, sample_size):
+        if self.sample is not None and self.state.pdf is None:
             self.state.pdf = self.pdf(self.state)
 
-        return super().sample(sample_size, None)
+        return super().sample(sample_size)
 
     def next_state(self, state, iteration):
         candidate = self.proposal(state)
@@ -184,7 +177,7 @@ class MetropolisUpdate(AbstractMarkovUpdate):
             next_state = state
 
         if self.is_adaptive:
-            self.adapt(iteration, state, next_state)
+            self.adapt(iteration, state, next_state, accept)
 
         return next_state
 

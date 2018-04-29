@@ -30,7 +30,7 @@ class PotDensityTest(DensityTest):
         density = self.class_to_test(ndim)
         xs = np.random.random((count, ndim))
         pot_grad = density.pot_gradient(xs)
-        self.assertEqual(pot_grad.shape, (count, ndim))
+        self.assertEqual((count, ndim), pot_grad.shape)
 
 
 class DistributionTest(object):
@@ -41,7 +41,7 @@ class DistributionTest(object):
         ndim = 3
         distr = self.class_to_test(ndim)
         res = distr.rvs(count)
-        self.assertEqual(res.shape, (count, ndim))
+        self.assertEqual((count, ndim), res.shape)
 
 
 class GaussTest(TestCase, DistributionTest, PotDensityTest):

@@ -125,7 +125,7 @@ class StaticSphericalHMC(HamiltonianUpdate):
         if not isinstance(state, SphericalHMCState):
             state = SphericalHMCState(state, theta=self.x_to_theta(state))
         if state.theta is None:
-            state.theta = self.x_to_theta(state)
+            state.theta = self.x_to_theta(np.array(state, copy=False))
         if state.tag is None:
             state.tag = self.log_weight(state.theta)
         if state.pot_gradient is None:
@@ -225,14 +225,15 @@ class DualAveragingSphericalHMC(StaticSphericalHMC):
         E_prp = proposal_u + .5*np.sum(proposal_z**2)
 
         # aprob = np.exp(-E_cur + E_prp)
-        aprob = self.accept(
+        aprob = DualAveragingSphericalHMC.accept(
+            self,
             SphericalHMCState(None, momentum=current_z, pdf=self.target_density.pdf(current)),
             SphericalHMCState(None, momentum=proposal_z, pdf=self.target_density.pdf(self.theta_to_x(proposal_q))))
         # print('aprob:', aprob)
             
         a = 2. * (aprob > 0.5) - 1.
         # print('a', a)
-        while aprob != 0 and aprob**a > 2**(-a):
+        while aprob**a > 2**(-a):
             stepsize = 2.**a * stepsize
             # print('stepsize:', stepsize)
             proposal_q, proposal_z, proposal_du = integrator(
@@ -241,7 +242,8 @@ class DualAveragingSphericalHMC(StaticSphericalHMC):
             proposal_u = self.target_density.pot(self.theta_to_x(proposal_q))
             E_prp = proposal_u + .5*np.sum(proposal_z**2)
             # aprob = np.exp(-E_cur + E_prp)
-            aprob = self.accept(
+            aprob = DualAveragingSphericalHMC.accept(
+                self,
                 SphericalHMCState(None, momentum=current_z,
                                   pdf=self.target_density.pdf(current)),
                 SphericalHMCState(None, momentum=proposal_z,

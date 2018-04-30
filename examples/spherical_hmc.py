@@ -1,27 +1,16 @@
-#from samplers.mcmc.spherical_hmc import StaticSphericalHMC
-from samplers.mcmc.spherical_hmc import DualAveragingSphericalHMC
-from densities.camel import UnconstrainedCamel
-from plotting.plot_1d import plot_1d
-from plotting.plot_2d import plot_2d
+from monte_carlo import hamiltonian, densities
+from monte_carlo.plotting.plot_1d import plot_1d
+from monte_carlo.plotting.plot_2d import plot_2d
 import numpy as np
 from timeit import default_timer as timer
-from statistics.print_statistics import print_statistics
 
-# decorator to count calls to target function
-def counted(fn):
-    def wrapper(*args, **kwargs):
-        wrapper.called += 1
-        return fn(*args, **kwargs)
-    wrapper.called = 0
-    wrapper.__name__ = fn.__name__
-    return wrapper
 
 nadapt = 100
+
+
 def adapt_schedule(t):
-    if t > nadapt:
-        return False
-    else:
-        return True
+    return t <= nadapt
+
 
 np.random.seed(1234)
 
@@ -29,32 +18,23 @@ ndim = 1
 nsamples = 10000
 nburnin = nadapt
 
-target = UnconstrainedCamel()
-target_log_pdf = counted(target.log_pdf)
-target_log_pdf_gradient = counted(target.log_pdf_gradient)
+target = densities.UnconstrainedCamel(1)
 
 start = np.full(ndim, 1/3)
 
 lim_lower = np.full(ndim, 0)
 lim_upper = np.full(ndim, 1)
 #sampler = StaticSphericalHMC(ndim, target_log_pdf, target.log_pdf_gradient, .005, .005, 8, 8, lim_lower, lim_upper)
-sampler = DualAveragingSphericalHMC(ndim, target_log_pdf, target_log_pdf_gradient, .04, start, adapt_schedule, lim_lower, lim_upper, t0=10., gamma=.05, kappa=.75)
+sampler = hamiltonian.DualAveragingSphericalHMC(target, .04, adapt_schedule, lim_lower, lim_upper, t0=10., gamma=.05, kappa=.75)
+sampler.init_sampler(start)
 
-target_log_pdf.called = 0
-target_log_pdf_gradient.called = 0
 t_start = timer()
-samples, mean, variance, n_accepted = sampler.sample(nsamples, start)
+samples = sampler.sample(nsamples)
 t_end = timer()
 
 # discard burnin samples
 samples = samples[1000:]
-mean = samples.mean()
-variance = samples.var()
-
-n_target_calls = target_log_pdf.called
-n_gradient_calls = target_log_pdf_gradient.called
-
-print_statistics(samples, mean, variance, exp_mean=0.5, exp_var=0.0331, exp_var_var=0.000609, runtime=t_end-t_start, n_target_calls=n_target_calls, n_gradient_calls=n_gradient_calls, n_accepted=n_accepted)
+#print_statistics(samples, mean, variance, exp_mean=0.5, exp_var=0.0331, exp_var_var=0.000609, runtime=t_end-t_start, n_target_calls=n_target_calls, n_gradient_calls=n_gradient_calls, n_accepted=n_accepted)
 
 if ndim == 1:
     plot_1d(samples, target.pdf)

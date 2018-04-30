@@ -98,7 +98,7 @@ class StaticSphericalHMCTest(TestCase):
         # hamilton monte carlo
         density = densities.make_dist(1, pdf, pdf_gradient=dh_dq)
         hmcm = StaticSphericalHMC(density, .5, 2, 1, 10)
-        hmcm.init_sampler([0.], get_info=True)
+        hmcm.init_sampler([0.1], get_info=True)
         res = hmcm.sample(100)
         self.assertEqual((100, 1), res.shape)
 
@@ -109,19 +109,17 @@ class StaticSphericalHMCTest(TestCase):
         sample = hmcm.sample(1000)  # generate 1000 samples
         self.assertAlmostEqual(0.5, np.mean(sample), 0)
 
+    def test_gauss2(self):
+        # spherical hmc
+        density = densities.Gaussian(1, mu=.6, scale=.1)
+
+        hmcm = hamiltonian.StaticSphericalHMC(density, .9, 1, 10, 100)
+        hmcm.init_sampler(0.6, get_info=True)
+        sample = hmcm.sample(100)
+        self.assertEqual((100, 1), sample.shape)
+
 
 class DualSphericalHMCTest(TestCase):
-    def test_gauss(self):
-        s = 1
-        dh_dq = lambda q: q
-        pdf = lambda x: np.exp(-x ** 2 / 2 / s ** 2) / np.sqrt(
-            2 * np.pi * s ** 2)
-        # hamilton monte carlo
-        density = densities.make_dist(1, pdf, pdf_gradient=dh_dq)
-        hmcm = DualAveragingSphericalHMC(density, 1., lambda t: t < 100)
-        hmcm.init_sampler([0.], get_info=True)
-        res = hmcm.sample(100)
-        self.assertEqual((100, 1), res.shape)
 
     def test_mean(self):
         density = densities.Uniform(2)

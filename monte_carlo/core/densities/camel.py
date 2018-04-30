@@ -25,9 +25,11 @@ class UnconstrainedCamel(Density):
         mu_a = ndim*[self.mu_a]
         mu_b = ndim*[self.mu_b]
 
-        pdf_a = multivariate_normal.pdf(xs, mean=mu_a, cov=self.cov)
-        pdf_b = multivariate_normal.pdf(xs, mean=mu_b, cov=self.cov)
-        return np.atleast_1d(pdf_a + pdf_b).flatten() / 2
+        pdf_a = np.atleast_1d(
+            multivariate_normal.pdf(xs, mean=mu_a, cov=self.cov))
+        pdf_b = np.atleast_1d(
+            multivariate_normal.pdf(xs, mean=mu_b, cov=self.cov))
+        return (pdf_a + pdf_b).flatten() / 2
     
     def pdf_gradient(self, xs):
         xs = interpret_array(xs, self.ndim)
@@ -38,8 +40,10 @@ class UnconstrainedCamel(Density):
 
         mu_a = ndim * [self.mu_a]
         mu_b = ndim * [self.mu_b]
-        pdf_a = multivariate_normal.pdf(xs, mean=mu_a, cov=self.cov)
-        pdf_b = multivariate_normal.pdf(xs, mean=mu_b, cov=self.cov)
+        pdf_a = np.atleast_1d(
+            multivariate_normal.pdf(xs, mean=mu_a, cov=self.cov))
+        pdf_b = np.atleast_1d(
+            multivariate_normal.pdf(xs, mean=mu_b, cov=self.cov))
         return ((-xs + self.mu_a) / self.cov * pdf_a[:, np.newaxis] +
                 (-xs + self.mu_b) / self.cov * pdf_b[:, np.newaxis]) / 2
 

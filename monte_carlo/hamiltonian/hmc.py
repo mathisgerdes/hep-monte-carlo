@@ -1,7 +1,7 @@
 """
 Module implements Hamilton Monte Carlo methods for sampling.
 """
-
+import numpy as np
 from ..core.markov import MetropolisUpdate, MetropolisState
 from .simulation import HamiltonLeapfrog
 
@@ -52,19 +52,21 @@ class HamiltonianUpdate(MetropolisUpdate):
             self.simulate = simulate
 
     def accept(self, state, candidate):
-        prob = (candidate.pdf * self.p_dist.pdf(candidate.momentum) /
-                state.pdf / self.p_dist.pdf(state.momentum))
-        return prob
+        try:
+            prob = (candidate.pdf * self.p_dist.pdf(candidate.momentum) /
+                    state.pdf / self.p_dist.pdf(state.momentum))
+            if np.isnan(prob):
+                return 0
+            return prob
+        except RuntimeWarning:
+            return 0
 
     def proposal_pdf(self, state, candidate):
         pass  # update is Metropolis-like
 
     def proposal(self, state):
         # first update
-        try:
-            state.momentum = self.p_dist.proposal()
-        except AttributeError:
-            return HamiltonianUpdate.proposal(self, HamiltonState(state))
+        state.momentum = self.p_dist.proposal()
 
         # second update
         q, p = self.simulate(state, state.momentum)
@@ -81,6 +83,8 @@ class HamiltonianUpdate(MetropolisUpdate):
     def init_state(self, state):
         if not isinstance(state, HamiltonState):
             state = HamiltonState(state)
+        if state.momentum is None:
+            state.momentum = self.p_dist.proposal()
         return super().init_state(state)
 
     @property

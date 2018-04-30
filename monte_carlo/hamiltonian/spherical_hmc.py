@@ -55,7 +55,6 @@ def integrator(q, pot_gradient, z, du, trafo, jac, stepsize, nsteps):
         # make a full step for position
         # 1. map to augmented sphere
         x = np.concatenate((np.cos(q), [1])) * np.concatenate(([1], cumsinq))
-        v = v[0]  # TODO: fix for 1D only?
         dx = (np.concatenate((-v*np.tan(q), [0])) +
               np.concatenate(([0], np.cumsum(v*cot(q))))) * x
         # 2. rotate on sphere
@@ -76,7 +75,7 @@ def integrator(q, pot_gradient, z, du, trafo, jac, stepsize, nsteps):
         
         # make last half step for velocity
         cumsinq = np.cumprod(np.sin(q))
-        du = pot_gradient(trafo(q))*jac
+        du = pot_gradient(trafo(q))[0]*jac
         if l != nsteps-1:
             v = v - stepsize * du/np.concatenate(([1], cumsinq[:-1]**2))
     
@@ -96,7 +95,7 @@ class StaticSphericalHMC(HamiltonianUpdate):
                  nsteps_min, nsteps_max, lim_lower=None, lim_upper=None,
                  is_adaptive=False):
         p_dist = Gaussian(target_density.ndim)
-        super().__init__(target_density, p_dist, None, None, is_adaptive)
+        super().__init__(target_density, p_dist, None, None, is_adaptive=is_adaptive)
         self.target_density = target_density
         self.p_dist = p_dist
 
@@ -130,7 +129,7 @@ class StaticSphericalHMC(HamiltonianUpdate):
         if state.tag is None:
             state.tag = self.log_weight(state.theta)
         if state.pot_gradient is None:
-            state.pot_gradient = self.target_density.pot_gradient(state)
+            state.pot_gradient = self.target_density.pot_gradient(state)[0]
 
         return super().init_state(state)
     
@@ -225,21 +224,30 @@ class DualAveragingSphericalHMC(StaticSphericalHMC):
         proposal_u = self.target_density.pot(self.theta_to_x(proposal_q))
         E_prp = proposal_u + .5*np.sum(proposal_z**2)
 
-        aprob = np.exp(-E_cur + E_prp)
+        # aprob = np.exp(-E_cur + E_prp)
+        aprob = self.accept(
+            SphericalHMCState(None, momentum=current_z, pdf=self.target_density.pdf(current)),
+            SphericalHMCState(None, momentum=proposal_z, pdf=self.target_density.pdf(self.theta_to_x(proposal_q))))
         # print('aprob:', aprob)
             
         a = 2. * (aprob > 0.5) - 1.
         # print('a', a)
-        while aprob**a > 2**(-a):
+        while aprob != 0 and aprob**a > 2**(-a):
             stepsize = 2.**a * stepsize
             # print('stepsize:', stepsize)
             proposal_q, proposal_z, proposal_du = integrator(
-                proposal_q, self.target_density.pot_gradient, current_z,
+                current.theta, self.target_density.pot_gradient, current_z,
                 proposal_du, self.theta_to_x, self.J_xtheta, stepsize, nsteps=1)
             proposal_u = self.target_density.pot(self.theta_to_x(proposal_q))
             E_prp = proposal_u + .5*np.sum(proposal_z**2)
-            aprob = np.exp(-E_cur + E_prp)
-            # TODO: terminates with [nan]; cant terminate for uniform density
+            # aprob = np.exp(-E_cur + E_prp)
+            aprob = self.accept(
+                SphericalHMCState(None, momentum=current_z,
+                                  pdf=self.target_density.pdf(current)),
+                SphericalHMCState(None, momentum=proposal_z,
+                                  pdf=self.target_density.pdf(
+                                      self.theta_to_x(proposal_q))))
+
             # print('aprob:', aprob)
 
         # limit the stepsize to reasonable values

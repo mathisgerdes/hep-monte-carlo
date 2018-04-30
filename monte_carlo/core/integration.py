@@ -237,6 +237,9 @@ class MonteCarloMultiImportance(object):
         for j, eval_count in zip(range(eval_counts.size), eval_counts):
             estimates[j], ws_est[j] = self.iterate(fn, eval_count, j < m2, True)
 
+        if m2 == 0:
+            return None, None
+
         if self.var_weighted:
             # sample variance of individual iterations
             variances = (ws_est - estimates ** 2) / eval_counts

@@ -94,56 +94,60 @@ class MetropolisUpdate(MarkovUpdate):
         return next_state
 
 
-def make_metropolis(ndim, target_pdf, proposal=None, proposal_pdf=None):
-    """ Use the Metropolis algorithm to generate a sample.
+class DefaultMetropolis(MetropolisUpdate):
 
-    Example:
-        >>> pdf = lambda x: np.sin(10*x)**2
-        >>> met = make_metropolis(1, pdf)    # 1 dimensional
-        >>> sample = met.sample(1000, 0.1)   # generate 1000 samples
+    def __init__(self, ndim, target_pdf, proposal=None, proposal_pdf=None):
+        """ Use the Metropolis algorithm to generate a sample.
 
-    :param ndim: Dimensionality of sample space.
-    :param target_pdf: Desired (unnormalized) probability distribution.
-    :param proposal: A proposal generator. Take one or zero arguments.
-        First argument is previous state. If it is used, and proposal is not
-        symmetric, proposal_pdf must be passed.
-    :param proposal_pdf: Function taking two arguments, previous and candidate
-        state, and returns the conditional probability of proposing that
-        candidate. Pass None (default) if the proposal is symmetric.
-    """
-    update = MetropolisUpdate(ndim, target_pdf)
-    if proposal is None:
-        def _proposal(_):
-            """ Uniform proposal generator. """
-            candidate = np.random.rand(ndim)
-            return MetropolisState(candidate, target_pdf(candidate))
+        Example:
+            >>> pdf = lambda x: np.sin(10*x)**2
+            >>> met = DefaultMetropolis(1, pdf)    # 1 dimensional
+            >>> sample = met.sample(1000, 0.1)   # generate 1000 samples
 
-        if proposal_pdf is not None:
-            raise RuntimeWarning("No proposal given, ignoring proposal_pdf")
-        prop_pdf = None
-    else:
-        try:
-            proposal()
+        :param ndim: Dimensionality of sample space. :param target_pdf:
+        Desired (unnormalized) probability distribution. :param proposal: A
+        proposal generator. Take one or zero arguments. First argument is
+        previous state. If it is used, and proposal is not symmetric,
+        proposal_pdf must be passed. :param proposal_pdf: Function taking two
+        arguments, previous and candidate state, and returns the conditional
+        probability of proposing that candidate. Pass None (default) if the
+        proposal is symmetric.
+        """
+        super().__init__(ndim, target_pdf, False)
 
-            def prop(_):
-                return proposal()
+        if proposal is None:
+            def _proposal(_):
+                """ Uniform proposal generator. """
+                candidate = np.random.rand(ndim)
+                return MetropolisState(candidate, target_pdf(candidate))
 
-        except TypeError:
-            prop = proposal
+            if proposal_pdf is not None:
+                raise RuntimeWarning("No proposal given, ignoring proposal_pdf")
+            prop_pdf = None
+        else:
+            try:
+                proposal()
 
-        def _proposal(state):
-            """ Modified proposal """
-            candidate = prop(state)
-            return MetropolisState(candidate, target_pdf(candidate))
+                def _proposal(_):
+                    return proposal()
 
-        try:
-            proposal_pdf(np.zeros(ndim))
+            except TypeError:
+                _proposal = proposal
 
-            def prop_pdf(_, candidate):
-                return proposal_pdf(candidate)
-        except TypeError:
-            prop_pdf = proposal_pdf
+            try:
+                proposal_pdf(np.zeros(ndim))
 
-    update.proposal = _proposal
-    update.proposal_pdf = prop_pdf
-    return update
+                def prop_pdf(_, candidate):
+                    return proposal_pdf(candidate)
+            except TypeError:
+                prop_pdf = proposal_pdf
+
+        self._proposal = _proposal
+        self._proposal_pdf = prop_pdf
+
+    def proposal(self, state):
+        candidate = self._proposal(state)
+        return MetropolisState(candidate, self.pdf(candidate))
+
+    def proposal_pdf(self, state, candidate):
+        return self._proposal_pdf(state, candidate)

@@ -7,7 +7,7 @@ expensive to evaluate.
 import numpy as np
 
 from ..core.densities import Gaussian
-from ..core.markov import MixingMarkovUpdate, make_metropolis
+from ..core.markov import MixingMarkovUpdate, DefaultMetropolis
 from ..core.integration import MultiChannelMC
 from ..hamiltonian import HamiltonianUpdate
 
@@ -30,7 +30,7 @@ class AbstractMC3(object):
         self.channels = channels
         self.mc_importance = MultiChannelMC(channels)
 
-        self.sample_is = make_metropolis(
+        self.sample_is = DefaultMetropolis(
             self.ndim, self.fn, self.channels.proposal, self.channels.pdf)
 
         self.sample_local = sample_local
@@ -102,7 +102,7 @@ class MC3Uniform(AbstractMC3):
 
     def __init__(self, fn, channels, delta, beta=.5):
 
-        sample_local = make_metropolis(channels.ndim, fn, self.generate_local)
+        sample_local = DefaultMetropolis(channels.ndim, fn, self.generate_local)
         super().__init__(fn, channels, sample_local, beta)
 
         if np.ndim(delta) == 0:

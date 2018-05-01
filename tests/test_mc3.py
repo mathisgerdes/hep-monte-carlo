@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 from monte_carlo import *
+from monte_carlo.mc3 import *
 
 
 class PlainMC3Test(TestCase):
@@ -14,7 +15,7 @@ class PlainMC3Test(TestCase):
         mc3_sampler = MC3Uniform(fn, channels, delta=.01, beta=1)
 
         res = mc3_sampler(([], [500] * 40, []), count, initial=.5, log_every=0)
-        self.assertEqual(res.shape, (count, 1))
+        self.assertEqual(res.data.shape, (count, 1))
 
 
 class HamiltonMC3Test(TestCase):
@@ -34,4 +35,4 @@ class HamiltonMC3Test(TestCase):
                                   steps=10, step_size=.1, beta=1)
 
         res = mc3_sampler(([], [500] * 40, []), count, .5, log_every=0)
-        self.assertEqual(res.shape, (count, 1))
+        self.assertEqual(res.data.shape, (count, 1))

@@ -160,7 +160,7 @@ class MultiChannel(Distribution):
         :return: A ChannelsSample object.
         """
         sample, sample_size = self.rvs(sample_size, True)
-        weights = self.pdf(*sample.transpose())
+        weights = self.pdf(sample)
         self.current_sample = ChannelsSample(
             self.channels_weight, sample, weights, sample_size)
         return self.current_sample

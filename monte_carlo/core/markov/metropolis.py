@@ -43,7 +43,7 @@ class MetropolisUpdate(MarkovUpdate):
         """
         if self.is_hasting:
             return (candidate.pdf * self.proposal_pdf(candidate, state) /
-                    state.pdf * self.proposal_pdf(state, candidate))
+                    state.pdf / self.proposal_pdf(state, candidate))
         else:
             # otherwise (simpler) Metropolis update
             return candidate.pdf / state.pdf
@@ -113,8 +113,6 @@ class DefaultMetropolis(MetropolisUpdate):
         probability of proposing that candidate. Pass None (default) if the
         proposal is symmetric.
         """
-        super().__init__(ndim, target_pdf, False)
-
         if proposal is None:
             def _proposal(_):
                 """ Uniform proposal generator. """
@@ -145,9 +143,15 @@ class DefaultMetropolis(MetropolisUpdate):
         self._proposal = _proposal
         self._proposal_pdf = prop_pdf
 
+        # must be at the and since it calls proposal_pdf to see if it works
+        super().__init__(ndim, target_pdf, False)
+
     def proposal(self, state):
         candidate = self._proposal(state)
         return MetropolisState(candidate, self.pdf(candidate))
 
     def proposal_pdf(self, state, candidate):
-        return self._proposal_pdf(state, candidate)
+        try:
+            return self._proposal_pdf(state, candidate)
+        except TypeError:
+            raise NotImplementedError()

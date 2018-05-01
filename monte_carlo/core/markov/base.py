@@ -66,7 +66,7 @@ class MarkovUpdate(object):
 
         for i in range(1, sample_size):
             state = self.next_state(state, i)
-            if np.array_equal(state, chain[i - 1]):
+            if not np.array_equal(state, chain[i - 1]):
                 sample.accepted += 1
 
             chain[i] = state

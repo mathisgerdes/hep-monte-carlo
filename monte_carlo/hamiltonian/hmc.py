@@ -2,7 +2,7 @@
 Module implements Hamilton Monte Carlo methods for sampling.
 """
 import numpy as np
-from ..core.markov import MetropolisUpdate, MetropolisState
+from ..core.markov.metropolis import MetropolisUpdate, MetropolisState
 from .simulation import HamiltonLeapfrog
 
 

@@ -1,8 +1,8 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .densities import Distribution
-from .util import interpret_array, hypercube_bounded
+from monte_carlo.core.densities import Distribution
+from monte_carlo.core.util import interpret_array, hypercube_bounded
 
 
 # VOLUMES for Stratified Sampling

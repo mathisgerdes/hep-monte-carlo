@@ -1,11 +1,13 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .densities import Distribution
+from monte_carlo.core.densities import Distribution
+from monte_carlo.core.sampling import Sample
 
 
-class ChannelSample(object):
-    def __init__(self, channel_weights, sample, sample_sizes, sample_weights):
+class ChannelsSample(Sample):
+
+    def __init__(self, channel_weights, data, weights, sample_sizes, **kwargs):
         """ Store information about a sample generated using Channels.
 
         self.full_sample_sizes: Total number of points generated in each of
@@ -40,6 +42,8 @@ class ChannelSample(object):
         :param sample_sizes: Number of samples generated in each channel.
         :param sample_weights: Probability densities of the sample points.
         """
+        super().__init__(data=data, weights=weights, **kwargs)
+
         self.full_sample_sizes = sample_sizes
 
         # ignore inactive channels i with sample_sizes[i] == 0
@@ -52,9 +56,6 @@ class ChannelSample(object):
         self.channel_bounds = np.array(
             [np.sum(self.count_per_channel[0:i])
              for i in range(self.active_channel_count)])
-
-        self.sample = sample
-        self.sample_weights = sample_weights
 
 
 class MultiChannel(Distribution):
@@ -133,8 +134,8 @@ class MultiChannel(Distribution):
         :param return_sizes: If true, count the number of samples generated
             using each channel.
         :return: Numpy array of shape (sample_size, self.ndim).
-            If return_sizes is true, return a tuple of the sample (numpy array)
-            and a numpy array specifying the number of samples generated
+            If return_sizes is true, return a tuple of the sample and
+            another numpy array specifying the number of samples generated
             using each channel.
         """
         sample_sizes = np.random.multinomial(sample_size, self.channels_weight)
@@ -149,19 +150,19 @@ class MultiChannel(Distribution):
         else:
             return sample_points
 
-    def generate_sample(self, sample_size):
+    def sample(self, sample_size):
         """ Generate a full sample and information for multi channel MC.
 
         The generated ChannelSample containing all information of the channel
         is returned and saved as self.current_sample.
 
         :param sample_size: Number of sample points.
-        :return: A ChannelSample object.
+        :return: A ChannelsSample object.
         """
         sample, sample_size = self.rvs(sample_size, True)
         weights = self.pdf(*sample.transpose())
-        self.current_sample = ChannelSample(self.channels_weight,
-                                            sample, sample_size, weights)
+        self.current_sample = ChannelsSample(
+            self.channels_weight, sample, weights, sample_size)
         return self.current_sample
 
     def update_channel_weights(self, new_channel_weights):

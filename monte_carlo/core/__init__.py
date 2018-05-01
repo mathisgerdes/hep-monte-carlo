@@ -65,6 +65,6 @@ from . import densities
 from . import util
 
 from .integration import *
-from .sampling import *
 from .markov import *
-from .densities.base import *
+from .sampling import AcceptRejectSampler
+from .densities.base import Density, Distribution, make_dist, make_dist_vect

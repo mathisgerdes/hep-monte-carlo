@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def effective_sample_size(samples, mean, var):
     shape = samples.shape
     nsamples = shape[0]
@@ -14,6 +15,7 @@ def effective_sample_size(samples, mean, var):
             rho = autocorr(samples[:, dim], mean, var, lag)
         
     return nsamples / (1 + 2*sum)
+
 
 def autocorr(samples, mean, var, lag=1):
     nsamples = len(samples)

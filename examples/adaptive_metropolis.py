@@ -28,18 +28,16 @@ metropolis_sampler = AdaptiveMetropolisUpdate(
     adapt_schedule=metropolis_adapt_schedule)
 
 # burn in
-metropolis_sampler.init_sampler(start, log_every=100)
-metropolis_sampler.sample(nburnin)
+metropolis_sampler.sample(nburnin, start)
 metropolis_sampler.is_adaptive = False
-metropolis_sampler.init_sampler(start)
 
 t_start = timer()
-samples = metropolis_sampler.sample(nsamples)
+sample = metropolis_sampler.sample(nsamples, start)
 t_end = timer()
 print(t_end - t_start)
 
 
 if ndim == 1:
-    plot_1d(samples, target.pdf)
+    plot_1d(sample.data, target.pdf)
 elif ndim == 2:
-    plot_2d(samples, target.pdf)
+    plot_2d(sample.data, target.pdf)

@@ -1,4 +1,5 @@
-from monte_carlo import densities, SphericalNUTS
+from monte_carlo import densities
+from monte_carlo.hamiltonian import SphericalNUTS
 from monte_carlo.plotting.plot_1d import plot_1d
 from monte_carlo.plotting.plot_2d import plot_2d
 import numpy as np
@@ -42,23 +43,20 @@ lim_lower = np.full(ndim, 0)
 lim_upper = np.full(ndim, 1)
 sampler = SphericalNUTS(target, adapt_schedule, lim_lower, lim_upper,
                         t0=10., gamma=.05)
-sampler.init_sampler(start, log_every=500)
 
 t_start = timer()
-samples = sampler.sample(nsamples)
+sample = sampler.sample(nsamples, start, log_every=500)
 t_end = timer()
 
 # discard burn-in samples
-samples = samples[1000:]
-mean = samples.mean()
-variance = samples.var()
+sample.data = sample.data[1000:]
 
 
 if ndim == 1:
-    plot_1d(samples, target.pdf)
+    plot_1d(sample.data, target.pdf)
 elif ndim == 2:
-    plot_2d(samples, target.pdf)
+    plot_2d(sample.data, target.pdf)
 else:
-    plot_1d(samples[:, 0], target.pdf)
+    plot_1d(sample.data[:, 0], target.pdf)
 
 print("time", t_end - t_start)

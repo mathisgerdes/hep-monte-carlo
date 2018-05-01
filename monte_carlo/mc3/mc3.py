@@ -7,8 +7,8 @@ expensive to evaluate.
 import numpy as np
 
 from ..core.densities import Gaussian
-from ..core.markov import make_metropolis, MixingMarkovUpdate
-from ..core.integration import MonteCarloMultiImportance
+from ..core.markov import MixingMarkovUpdate, make_metropolis
+from ..core.integration import MultiChannelMC
 from ..hamiltonian import HamiltonianUpdate
 
 
@@ -28,7 +28,7 @@ class AbstractMC3(object):
         self.ndim = channels.ndim
         self.fn = fn
         self.channels = channels
-        self.mc_importance = MonteCarloMultiImportance(channels)
+        self.mc_importance = MultiChannelMC(channels)
 
         self.sample_is = make_metropolis(
             self.ndim, self.fn, self.channels.proposal, self.channels.pdf)
@@ -39,7 +39,7 @@ class AbstractMC3(object):
         self.mixing_sampler = MixingMarkovUpdate(self.ndim, updates)
         self.beta = beta
 
-        self.int_est, self.int_err = None, None  # store integration results
+        self.integration_sample = None
 
     def integrate(self, *eval_sizes):
         """ Execute multi channel integration and optimization.
@@ -49,8 +49,8 @@ class AbstractMC3(object):
             importance sampling (see MonteCarloMultiImportance).
         :return: The integral and error approximates.
         """
-        self.int_est, self.int_err = self.mc_importance(self.fn, *eval_sizes)
-        return self.int_est, self.int_err
+        self.integration_sample = self.mc_importance(self.fn, *eval_sizes)
+        return self.integration_sample
 
     def sample(self, sample_size, initial=None, **kwargs):
         """ Generate a sample according to the function self.fn using MC3.
@@ -72,9 +72,7 @@ class AbstractMC3(object):
                 raise RuntimeError("Could not find a suitable initial value "
                                    "using the multi channel distribution.")
 
-        self.mixing_sampler.init_sampler(initial, **kwargs)
-
-        return self.mixing_sampler.sample(sample_size)
+        return self.mixing_sampler.sample(sample_size, initial, **kwargs)
 
     @property
     def beta(self):

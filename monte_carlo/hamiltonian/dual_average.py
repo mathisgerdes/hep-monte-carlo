@@ -2,7 +2,7 @@ import numpy as np
 from .hmc import HamiltonianUpdate
 
 
-class DualAveragingHMCUpdate(HamiltonianUpdate):
+class DualAveragingHMC(HamiltonianUpdate):
     """
     Adapts the stepsize by dual averaging
     """

@@ -1,5 +1,5 @@
 import numpy as np
-from .base import MetropolisUpdate, MetropolisState
+from .metropolis import MetropolisUpdate, MetropolisState
 
 
 class AdaptiveMetropolisUpdate(MetropolisUpdate):

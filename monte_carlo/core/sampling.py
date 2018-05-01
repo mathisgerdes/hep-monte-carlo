@@ -8,22 +8,51 @@ little or nothing is known.
 """
 
 import numpy as np
+from .util import interpret_array
 
-from .util import assure_2d
 
+class Sample(object):
+    def __init__(self, **kwargs):
+        self._data = None
 
-class SampleInfo(object):
-
-    def __init__(self):
-        self.ndim = 0
-        self.size = 0
-        self.var = None
+        self.variance = None
         self.mean = None
-        self.accepted = 0
+        self.weights = None
+
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
+
+    def extend_array(self, key, array):
+        current = getattr(self, key)
+        if current is None:
+            setattr(self, key, array)
+        else:
+            setattr(self, key, np.concatenate((current, array), axis=0))
+
+    def extend_all(self, *args):
+        if len(args) % 2 != 0:
+            raise RuntimeError("Must pass alternating keys and values")
+
+        for i in range(len(args) // 2):
+            self.extend_array(args[i], args[i+1])
 
     @property
-    def accept_ratio(self):
-        return self.accepted / self.size
+    def size(self):
+        return self.data.shape[0]
+
+    @property
+    def ndim(self):
+        return self.data.shape[1]
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        self._data = data
+        self.mean = np.mean(data, axis=0)
+        self.variance = np.var(data, axis=0)
 
 
 # ACCEPTANCE REJECTION
@@ -77,9 +106,9 @@ class AcceptRejectSampler(object):
 
         indices = np.arange(sample_size)
         while indices.size > 0:
-            proposal = assure_2d(self.sampling(indices.size))
+            proposal = interpret_array(self.sampling(indices.size), self.ndim)
             accept = np.random.rand(indices.size) * self.c * self.sampling_pdf(
                 *proposal.transpose()) <= self.pdf(*proposal.transpose())
             x[indices[accept]] = proposal[accept]
             indices = indices[np.logical_not(accept)]
-        return x
+        return Sample(data=x)

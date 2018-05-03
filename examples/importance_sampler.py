@@ -34,12 +34,15 @@ integration_sample = importance(target_pdf, [], [noptim], [])
 
 # generate unweighted events via acceptance/rejection events
 bound = np.max(integration_sample.function_values / integration_sample.weights)
-sampler = AcceptRejectSampler(target, 1, ndim, channels.rvs, channels)
-sample = sampler.sample(nsamples)
+
+# sampler = AcceptRejectSampler(target, 1, ndim, channels.rvs, channels)
+# sample = sampler.sample(nsamples)
 # reshuffle  (acceptance rejection is not a Markov chain)
 # samples = samples[np.random.choice(np.arange(nsamples),
 #                                    nsamples, replace=False)]
 
+sampler = DefaultMetropolis(ndim, target_pdf, channels.proposal, channels.pdf)
+sample = sampler.sample(nsamples, 0.5)
 
 t_end = timer()
 

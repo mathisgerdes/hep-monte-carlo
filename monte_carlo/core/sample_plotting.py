@@ -77,7 +77,7 @@ def plot2d(sample, target=None):
         x = np.linspace(extent[0], extent[1], bins)
         y = np.linspace(extent[2], extent[3], bins)
         mgrid = np.meshgrid(x, y)
-        im = ax5.imshow(target(*mgrid), extent=extent)
+        im = ax5.imshow(target(*mgrid), extent=extent, origin='lower')
         plt.colorbar(im, ax=ax5)
 
     fig.tight_layout()

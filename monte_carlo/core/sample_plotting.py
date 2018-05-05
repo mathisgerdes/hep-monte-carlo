@@ -20,6 +20,7 @@ def plot1d(sample, target=None):
     ax1 = plt.subplot2grid((3, 2), (0, 0), colspan=2)
     ax1.set_title('time series')
     ax1.plot(sample.data)
+    ax1.grid(True)
 
     ax2 = plt.subplot2grid((3, 2), (1, 0), rowspan=2)
     ax2.set_title('distribution')
@@ -51,6 +52,7 @@ def plot2d(sample, target=None):
     ax1.set_title('time series')
     ax1.plot(sample.data[:, 0], label="x")
     ax1.plot(sample.data[:, 1], label="y")
+    ax1.grid(True)
     ax1.legend()
 
     # guess a good binning
@@ -60,6 +62,7 @@ def plot2d(sample, target=None):
     ax2.set_title('distribution')
     counts, xedges, yedges, im = ax2.hist2d(*sample.data.transpose(), bins=bins)
     plt.colorbar(im, ax=ax2)
+    ax2.set_aspect('equal')
 
     # plot
     ax3 = plt.subplot2grid((3, width), (1, width-1))
@@ -79,6 +82,7 @@ def plot2d(sample, target=None):
         mgrid = np.meshgrid(x, y)
         im = ax5.imshow(target(*mgrid), extent=extent, origin='lower')
         plt.colorbar(im, ax=ax5)
+        ax5.set_aspect('equal')
 
     fig.tight_layout()
     return fig

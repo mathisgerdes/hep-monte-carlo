@@ -48,6 +48,11 @@ class AdaptiveMetropolisUpdate(MetropolisUpdate):
             if self.adapt_schedule(t) is True:
                 self.proposal_dist.cov = self.cov
 
+    def sample(self, sample_size, initial, out_mask=None, log_every=5000):
+        sample = super().sample(sample_size, initial, out_mask, log_every)
+        sample.target = self.pdf
+        return sample
+
 # class RobustAdaptiveMetropolis(StaticMetropolis):
 #    """
 #    rebustadaptive Metropolis-Hastings sampler according to Vihola (2012)

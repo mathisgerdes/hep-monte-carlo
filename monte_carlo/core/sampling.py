@@ -180,4 +180,4 @@ class AcceptRejectSampler(object):
                 *proposal.transpose()) <= self.pdf(*proposal.transpose())
             x[indices[accept]] = proposal[accept]
             indices = indices[np.logical_not(accept)]
-        return Sample(data=x)
+        return Sample(data=x, target=self.pdf)

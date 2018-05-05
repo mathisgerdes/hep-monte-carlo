@@ -46,6 +46,14 @@ class Density(object):
     def pdf_gradient(self, xs):
         raise NotImplementedError()
 
+    @property
+    def variance(self):
+        raise AttributeError()
+
+    @property
+    def mean(self):
+        raise AttributeError()
+
 
 class Distribution(Density):
 
@@ -62,25 +70,34 @@ class Distribution(Density):
         raise NotImplementedError()
 
 
-def make_dist(ndim, pdf, sampling=None, pdf_gradient=None):
-    if sampling is None:
-        dist = Density(ndim)
+def as_dist(pdf, ndim=None, rvs=None, pdf_gradient=None,
+            variance=None, mean=None):
+    if isinstance(pdf, Density):
+        dist = pdf
     else:
-        dist = Distribution(ndim)
-        dist.rvs = lambda count: interpret_array(sampling(count), ndim)
+        if ndim is None:
+            raise RuntimeError("If first argument is not a Density, "
+                               "ndim must be specified.")
 
-    dist.pdf = lambda xs: pdf(xs).flatten()
+        if rvs is None:
+            dist = Density(ndim)
+        else:
+            dist = Distribution(ndim)
+            dist.rvs = lambda count: interpret_array(rvs(count), ndim)
+
+        dist.pdf = lambda xs: pdf(xs).flatten()
+
     if pdf_gradient is not None:
         dist.pdf_gradient = pdf_gradient
+    if variance is not None:
+        dist.variance = variance
+    if mean is not None:
+        dist.mean = mean
     return dist
 
 
-def make_dist_vect(ndim, pdf_vect, sampling=None):
-    if sampling is None:
-        dist = Density(ndim)
-    else:
-        dist = Distribution(ndim)
-        dist.rvs = lambda count: interpret_array(sampling(count), ndim)
-    dist.__call__ = lambda *xs: pdf_vect(*xs).flatten()
-    dist.pdf = lambda xs: pdf_vect(*xs.transpose()).flatten()
-    return dist
+def as_dist_vect(pdf_vect, **kwargs):
+    def pdf(xs):
+        return pdf_vect(*xs.transpose()).flatten()
+
+    return as_dist(pdf, **kwargs)

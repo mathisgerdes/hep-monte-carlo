@@ -17,7 +17,7 @@ class ImportanceMC(object):
             >>> from monte_carlo import densities
             >>> sampling = lambda size: np.random.rand(size)**2
             >>> pdf = lambda x: 2*x
-            >>> dist = densities.make_dist(1, pdf, sampling)
+            >>> dist = densities.as_dist(1, pdf, sampling)
             >>> mc_imp = ImportanceMC(1, dist)
             >>> est, err = mc_imp(lambda x: x, 1000)
             >>> est, err  # the pdf is ideal since fn(x)/(2*x) = 1/2 = const

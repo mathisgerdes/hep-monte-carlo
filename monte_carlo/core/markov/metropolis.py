@@ -155,3 +155,8 @@ class DefaultMetropolis(MetropolisUpdate):
             return self._proposal_pdf(state, candidate)
         except TypeError:
             raise NotImplementedError()
+
+    def sample(self, sample_size, initial, out_mask=None, log_every=5000):
+        sample = super().sample(sample_size, initial, out_mask, log_every)
+        sample.target = self.pdf
+        return sample

@@ -13,6 +13,12 @@ class MarkovSample(Sample):
     def accept_ratio(self):
         return self.accepted / self.size
 
+    def _data_table(self):
+        titles, entries = super()._data_table()
+        titles.append('acceptance rate')
+        entries.append(str(self.accept_ratio))
+        return titles, entries
+
 
 # MARKOV CHAIN
 class MarkovUpdate(object):

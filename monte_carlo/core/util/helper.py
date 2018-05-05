@@ -101,3 +101,18 @@ def hypercube_bounded(index, null_value=0, shape=lambda xs: xs.shape[0],
 
         return fn_bounded
     return get_bounded
+
+
+class Counted(object):
+    def __init__(self, fn):
+        self.fn = fn
+        self.count = 0
+
+    def __call__(self, *args, **kwargs):
+        self.count += 1
+        return self.fn(*args, **kwargs)
+
+
+def count_calls(obj, *method_names):
+    for name in method_names:
+        setattr(obj, name, Counted(getattr(obj, name)))

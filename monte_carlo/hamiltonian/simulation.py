@@ -33,11 +33,13 @@ class HamiltonLeapfrog(object):
         """
         p = np.array(p_init, copy=True, ndmin=1, subok=True)
         q = np.array(q_init, copy=True, ndmin=1, subok=True)
+        pot_grad = self.pot_gradient(q)[0]
         try:
             for i in range(self.steps):
-                p -= self.step_size / 2 * self.pot_gradient(q)[0]
+                p -= self.step_size / 2 * pot_grad
                 q += self.step_size * self.kin_gradient(p)[0]
-                p -= self.step_size / 2 * self.pot_gradient(q)[0]
+                pot_grad = self.pot_gradient(q)[0]
+                p -= self.step_size / 2 * pot_grad
         except RuntimeWarning:
             # overflow, division
             return None, None

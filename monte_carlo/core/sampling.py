@@ -8,16 +8,21 @@ little or nothing is known.
 """
 
 import numpy as np
-from .util import interpret_array
+from .densities import as_dist
+from .util import interpret_array, effective_sample_size
+from .sample_plotting import plot1d, plot2d
 
 
 class Sample(object):
     def __init__(self, **kwargs):
         self._data = None
+        self._target = None
 
         self.variance = None
         self.mean = None
         self.weights = None
+
+        self.effective_sample_size = None
 
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -34,16 +39,24 @@ class Sample(object):
             raise RuntimeError("Must pass alternating keys and values")
 
         for i in range(len(args) // 2):
-            self.extend_array(args[i], args[i+1])
+            self.extend_array(args[i], args[i + 1])
 
+    # PROPOERTIES
     @property
     def size(self):
-        return self.data.shape[0]
+        try:
+            return self.data.shape[0]
+        except AttributeError:
+            return None
 
     @property
     def ndim(self):
-        return self.data.shape[1]
+        try:
+            return self.data.shape[1]
+        except AttributeError:
+            return None
 
+    # PROPERTIES TRIGGERING UPDATES
     @property
     def data(self):
         return self._data
@@ -51,8 +64,64 @@ class Sample(object):
     @data.setter
     def data(self, data):
         self._data = data
-        self.mean = np.mean(data, axis=0)
-        self.variance = np.var(data, axis=0)
+        self.update_data()
+
+    @property
+    def target(self):
+        return self._target
+
+    @target.setter
+    def target(self, target):
+        self._target = as_dist(target, self.ndim)
+        if self.data is not None:
+            self.update_data_target()
+
+    # UPDATES
+    def update_data(self):
+        self.mean = np.mean(self._data, axis=0)
+        self.variance = np.var(self._data, axis=0)
+        if self.target is not None:
+            self.update_data_target()
+
+    def update_data_target(self):
+        if self.ndim == 1:
+            try:
+                self.effective_sample_size = effective_sample_size(
+                    self.data, self.target.mean, self.target.variance)
+            except AttributeError:
+                # target may not have known mean/variance
+                pass
+
+    def plot(self):
+        if self.data is None:
+            return None
+        if self.ndim == 1:
+            return plot1d(self, target=self.target)
+        if self.ndim == 2:
+            return plot2d(self, target=self.target)
+
+    def _data_table(self):
+        titles = ['Data (size)', 'mean', 'variance',
+                  'effective sample size']
+        entries = [self.size, self.mean, self.variance,
+                   self.effective_sample_size]
+        return titles, [str(e) for e in entries]
+
+    def _html_list(self):
+        titles, entries = self._data_table()
+        info = ['<h3>' + type(self).__name__ + '</h3>',
+                '<table><tr><th style="text-align:left;">' +
+                '</th><th style="text-align:left;">'.join(titles) +
+                '</th></tr><tr><td style="text-align:left;">' +
+                '</td><td style="text-align:left;">'.join(entries) +
+                '</td></tr></table>']
+        return info
+
+    def _repr_html_(self):
+        return '\n'.join(self._html_list())
+
+    def _repr_png_(self):
+        self.plot()
 
 
 # ACCEPTANCE REJECTION

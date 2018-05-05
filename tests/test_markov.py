@@ -26,7 +26,7 @@ class MetropTest(TestCase):
             base_capped = np.minimum(base, np.ones(ndim) - delta)
             return base_capped + np.random.rand() * delta
 
-        dist = make_dist_vect(ndim, lambda x, y: np.sin(10 * x * y) ** 2)
+        dist = as_dist_vect(lambda x, y: np.sin(10 * x * y) ** 2, ndim=ndim)
         met = DefaultMetropolis(ndim, dist.pdf, local)  # 1 dimensional
         sample = met.sample(1000, [0.1, 0.1])  # generate 1000 samples
         self.assertEqual(sample.data.shape, (1000, 2))
@@ -62,7 +62,7 @@ class HamiltonDualAvTest(TestCase):
         pdf = lambda x: np.exp(-x ** 2 / 2 / s ** 2) / np.sqrt(
             2 * np.pi * s ** 2)
         # hamilton monte carlo
-        density = densities.make_dist(1, pdf, pdf_gradient=dh_dq)
+        density = densities.as_dist(pdf, ndim=1, pdf_gradient=dh_dq)
         momentum_dist = densities.Gaussian(1, scale=1)
         hmcm = hamiltonian.DualAveragingHMC(
             density, momentum_dist, 1, lambda t: t < 10)
@@ -78,7 +78,7 @@ class HamiltonNUTSTest(TestCase):
         pdf = lambda x: np.exp(-x ** 2 / 2 / s ** 2) / np.sqrt(
             2 * np.pi * s ** 2)
         # hamilton monte carlo
-        density = densities.make_dist(1, pdf, pdf_gradient=dh_dq)
+        density = densities.as_dist(pdf, ndim=1, pdf_gradient=dh_dq)
         momentum_dist = densities.Gaussian(1, scale=1)
         hmcm = hamiltonian.NUTSUpdate(density, momentum_dist, lambda t: t < 10)
         res = hmcm.sample(100, 0.)
@@ -92,7 +92,7 @@ class StaticSphericalHMCTest(TestCase):
         pdf = lambda x: np.exp(-x ** 2 / 2 / s ** 2) / np.sqrt(
             2 * np.pi * s ** 2)
         # hamilton monte carlo
-        density = densities.make_dist(1, pdf, pdf_gradient=dh_dq)
+        density = densities.as_dist(pdf, ndim=1, pdf_gradient=dh_dq)
         hmcm = hamiltonian.StaticSphericalHMC(density, .5, 2, 1, 10)
         res = hmcm.sample(100, 0.1)
         self.assertEqual((100, 1), res.data.shape)

@@ -102,3 +102,8 @@ class HamiltonianUpdate(MetropolisUpdate):
     @steps.setter
     def steps(self, steps):
         self.simulate.steps = steps
+
+    def sample(self, sample_size, initial, out_mask=None, log_every=5000):
+        sample = super().sample(sample_size, initial, out_mask, log_every)
+        sample.target = self.target_density
+        return sample

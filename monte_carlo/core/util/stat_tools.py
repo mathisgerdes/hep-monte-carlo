@@ -6,6 +6,12 @@ Module provides methods for analyzing the statistics of a sample
 import numpy as np
 
 
+def lag_auto_cov(values, k, mean=None):
+    if mean is None:
+        mean = np.mean(values)
+    return np.sum((values[:-k] - mean) * (values[k:] - mean)) / values.shape[0]
+
+
 def auto_cov(values):
     """ Compute the lag-autocovariance of a given array of values.
 
@@ -17,7 +23,7 @@ def auto_cov(values):
     acov = np.empty(size)
     acov[0] = np.var(values)
     for k in range(1, len(values)):
-        acov[k] = np.sum((values[:-k] - mean) * (values[k:] - mean)) / size
+        acov[k] = lag_auto_cov(values, k, mean=mean)
     return acov
 
 

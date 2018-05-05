@@ -30,9 +30,9 @@ class TestImportanceMC(TestCase):
 
     def test_sqrt(self):
         # equivalent to plain MC
-        dist = densities.make_dist_vect(
-            2, lambda x, y: 1 / np.sqrt(x) / np.sqrt(y),
-            lambda n: np.sqrt(np.random.random((n, 2))))
+        dist = densities.as_dist_vect(
+            lambda x, y: 1 / np.sqrt(x) / np.sqrt(y), ndim=2,
+            rvs=lambda n: np.sqrt(np.random.random((n, 2))))
 
         mc = ImportanceMC(dist)
         sample = mc(lambda x, y: x + y, self.eval_count)
@@ -42,8 +42,9 @@ class TestImportanceMC(TestCase):
         self.assertLess(sample.integral_err, 0.1)
 
     def test_ideal(self):
-        dist = densities.make_dist(1, lambda x: 2 * x,
-                                   lambda size: np.random.rand(size) ** 2)
+        dist = densities.as_dist(
+            lambda x: 2 * x, ndim=1,
+            rvs=lambda size: np.random.rand(size) ** 2)
 
         mc_imp = ImportanceMC(dist)
         sample = mc_imp(lambda x: x, 1000)

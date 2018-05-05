@@ -10,10 +10,10 @@ class Gaussian(Distribution):
     def __init__(self, ndim, mu=0, cov=None, scale=None):
         super().__init__(ndim, True)
 
-        self._mu = None
+        self._mean = None
         self._cov = None
         self._cov_inv = None
-        self.mu = mu
+        self.mean = mu
 
         if cov is None:
             if scale is None:
@@ -29,16 +29,16 @@ class Gaussian(Distribution):
 
     def pdf(self, xs):
         xs = interpret_array(xs, self.ndim)
-        prob = multi_norm.pdf(xs, self.mu, self.cov)
+        prob = multi_norm.pdf(xs, self.mean, self.cov)
         return np.array(prob, ndmin=1, copy=False, subok=True)
 
     def pdf_gradient(self, xs):
         xs = interpret_array(xs, self.ndim)
-        return - (xs-self.mu) / self.cov * self.pdf(xs)[:, np.newaxis]
+        return - (xs - self.mean) / self.cov * self.pdf(xs)[:, np.newaxis]
 
     def pot(self, xs):
         xs = interpret_array(xs, self.ndim)
-        logpdf = -multi_norm.logpdf(xs, self.mu, self.cov)
+        logpdf = -multi_norm.logpdf(xs, self.mean, self.cov)
         return np.array(logpdf, copy=False, ndmin=1, subok=True)
 
     def pot_gradient(self, xs):
@@ -46,20 +46,24 @@ class Gaussian(Distribution):
         return np.einsum('ij,kj->ki', self._cov_inv, xs)
 
     def rvs(self, sample_size):
-        sample = np.random.multivariate_normal(self.mu, self.cov, sample_size)
+        sample = np.random.multivariate_normal(self.mean, self.cov, sample_size)
         return sample
 
     @property
-    def mu(self):
-        return self._mu
+    def mean(self):
+        return self._mean
 
-    @mu.setter
-    def mu(self, value):
+    @mean.setter
+    def mean(self, value):
         if np.isscalar(value):
-            self._mu = np.empty(self.ndim)
-            self._mu.fill(value)
+            self._mean = np.empty(self.ndim)
+            self._mean.fill(value)
         else:
-            self._mu = np.array(value, copy=False, subok=True, ndmin=1)
+            self._mean = np.array(value, copy=False, subok=True, ndmin=1)
+
+    @property
+    def variance(self):
+        return np.diagonal(self._cov)
 
     @property
     def cov(self):

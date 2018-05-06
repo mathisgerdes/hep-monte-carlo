@@ -1,91 +1,78 @@
-from samplers.mcmc.metropolis import AdaptiveMetropolis
-from samplers.mcmc.importance_sampler import AdaptiveMultiChannelImportanceSampler
-from samplers.mcmc.mixed import MixedSampler
-from densities.camel import Camel
-from proposals.gaussian import Gaussian
-from plotting.plot_1d import plot_1d
-from plotting.plot_2d import plot_2d
+from monte_carlo import *
+from monte_carlo.plotting.plot_1d import plot_1d
+from monte_carlo.plotting.plot_2d import plot_2d
 import numpy as np
 from timeit import default_timer as timer
 
-# decorator to count calls to target function
-def counted(fn):
-    def wrapper(*args, **kwargs):
-        wrapper.called += 1
-        return fn(*args, **kwargs)
-    wrapper.called = 0
-    wrapper.__name__ = fn.__name__
-    return wrapper
-
+# set seed to PRNG, so that results are reproducible
 np.random.seed(1234)
 
-#ndim = 1
-ndim = 2
-nsamples = 2000
+ndim = 1  # 2
+nsamples = 10000
 nburnin = 1000
-nadapt = 1000
-t_adapt = [100, 200 ,400, 700]
+nadapt = nburnin
 
+
+# adapt proposal width every iteration until t > nadapt
 def metropolis_adapt_schedule(t):
-    if t > nadapt:
-        return False
-    else:
-        return True
+    return t <= nadapt
 
-def importance_sampler_adapt_schedule(t):
-    if t in t_adapt:
-        return True
-    else:
-        return False
 
-target = Camel()
-target_pdf = counted(target.pdf)
+# target function
+target = densities.Camel(ndim)
+util.count_calls(target, 'pdf')
 
-if ndim == 1:
-    start = 0.5
-else:
-    start = np.full(ndim, 0.5)
+# initial value
+start = np.full(ndim, 0.5)
 
-metropolis_proposal = Gaussian(mu=ndim*[0.5], cov=0.005)
-#metropolis_sampler = StaticMetropolis(ndim, target_pdf, metropolis_proposal)
-metropolis_sampler = AdaptiveMetropolis(ndim, target_pdf, metropolis_proposal, t_initial=100, adapt_schedule=metropolis_adapt_schedule)
+# proposal function for Metropolis sampler
+metropolis_proposal = densities.Gaussian(ndim, mu=0.5, cov=0.005)
 
-# burn in
+# initialize Metropolis Sampler
+metropolis_sampler = AdaptiveMetropolisUpdate(
+    ndim, target.pdf, metropolis_proposal,
+    t_initial=100, adapt_schedule=metropolis_adapt_schedule)
+
+# burn-in phase where the Metropolis sampler adapts its proposal width
 metropolis_sampler.sample(nburnin, start)
+
+# after that stop adaptation in order to ensure ergodicity of the chain
 metropolis_sampler.is_adaptive = False
 
-is_proposal_dists = [Gaussian(mu=ndim*[1/5], cov=0.005), Gaussian(mu=ndim*[4/5], cov=0.005)]
-is_proposal_weights = [0.5, 0.5]
-#importance_sampler =  StaticMultiChannelImportanceSampler(ndim, target_pdf, is_proposal_dists, is_proposal_weights)
-importance_sampler =  AdaptiveMultiChannelImportanceSampler(ndim, target_pdf, is_proposal_dists, is_proposal_weights, importance_sampler_adapt_schedule)
+# importance sampler mapping
+channels = MultiChannel([densities.Gaussian(ndim, mu=1/5, cov=0.005),
+                         densities.Gaussian(ndim, mu=4/5, cov=0.005)])
 
-# burn in
-importance_sampler.sample(nburnin, start)
-importance_sampler.is_adaptive = False
+# initialize the importance sampler
+importance = MultiChannelMC(channels)
+integration_sample = importance(target, [], [nadapt], [])
 
-sampler_weights = [0.5, 0.5]
-sampler = MixedSampler([metropolis_sampler, importance_sampler], sampler_weights)
+importance_sampler = DefaultMetropolis(ndim, target.pdf, channels)
 
-target_pdf.called = 0
+# initialize the mixed sampler a.k.a. (MC)^3
+# the sampler weights (beta parameter) can be tuned
+sampler_weights = [0.5, 0.5]  # should sum to 1
+sampler = MixingMarkovUpdate(ndim, [metropolis_sampler, importance_sampler],
+                             sampler_weights)
+
+# produce the samples
+target.pdf.count = 0
+
 t_start = timer()
-samples = sampler.sample(nsamples, start)
+sample = sampler.sample(nsamples, start)
 t_end = timer()
 
-n_target_calls = target_pdf.called
+n_target_calls = target.pdf.count
 
-n_accepted = 1
-for i in range(1, nsamples):
-    if (samples[i] != samples[i-1]).any():
-        n_accepted += 1
+# print some statistics (can take a while if sample size is large!)
+print('time: ', t_end - t_start)
+print('pdf calls: ', n_target_calls)
+print(sample)
 
-print('Total wallclock time: ', t_end-t_start, ' seconds')
-print('Average time per sample: ', (t_end-t_start)/nsamples, ' seconds')
-print('Number of accepted points: ', n_accepted)
-print('Number of target calls: ', n_target_calls)
-print('Sampling probability: ', n_accepted/n_target_calls)
-
-
+# plot the results
 if ndim == 1:
-    plot_1d(samples, target.pdf, mapping_pdf=importance_sampler.proposal_dist.pdf)
+    plot_1d(sample.data, target.pdf, mapping_pdf=channels.pdf)
 elif ndim == 2:
-    plot_2d(samples, target.pdf)
+    plot_2d(sample.data, target.pdf)
+else:
+    plot_1d(sample.data[:, 0], target.pdf)

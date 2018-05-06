@@ -1,6 +1,6 @@
 import numpy as np
 
-from .base import Distribution
+from ..density import Distribution
 from ..util import interpret_array
 
 

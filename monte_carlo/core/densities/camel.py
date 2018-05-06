@@ -1,4 +1,4 @@
-from .base import Density
+from ..density import Density
 from scipy.stats import multivariate_normal as multi_norm
 
 import numpy as np
@@ -11,7 +11,7 @@ class UnconstrainedCamel(Density):
     sum of two gaussians on a [0, 1] hypercube
     """
     def __init__(self, ndim, mu_a=1/3, mu_b=2/3, a=0.1):
-        super().__init__(ndim)
+        super().__init__(ndim, False)
         self._mu_a = self._mu_b = None
         self.mu_a = mu_a
         self.mu_b = mu_b

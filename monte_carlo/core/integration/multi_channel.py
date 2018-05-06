@@ -1,8 +1,8 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from monte_carlo.core.densities import Distribution
-from monte_carlo.core.sampling import Sample
+from ..density import Distribution
+from ..sampling import Sample
 
 
 class ChannelsSample(Sample):

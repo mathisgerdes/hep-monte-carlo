@@ -8,7 +8,7 @@ little or nothing is known.
 """
 
 import numpy as np
-from .densities import as_dist
+from .density import Density
 from .util import interpret_array, effective_sample_size
 from .sample_plotting import plot1d, plot2d
 
@@ -72,7 +72,7 @@ class Sample(object):
 
     @target.setter
     def target(self, target):
-        self._target = as_dist(target, self.ndim)
+        self._target = Density.make(target, self.ndim)
         if self.data is not None:
             self.update_data_target()
 

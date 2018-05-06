@@ -61,10 +61,12 @@ Example:
     True
 """
 
+from . import proposals
 from . import densities
 from . import util
 
 from .integration import *
 from .markov import *
+
 from .sampling import AcceptRejectSampler
-from .densities.base import Density, Distribution, as_dist, as_dist_vect
+from .density import Proposal, Density, Distribution

@@ -7,6 +7,7 @@ expensive to evaluate.
 import numpy as np
 
 from ..core.densities import Gaussian
+from ..core.proposals import UniformLocal
 from ..core.markov import MixingMarkovUpdate, DefaultMetropolis
 from ..core.integration import MultiChannelMC
 from ..hamiltonian import HamiltonianUpdate
@@ -17,7 +18,6 @@ class AbstractMC3(object):
     def __init__(self, fn, channels, sample_local, beta=.5):
         """ Base implementation of Multi-channel Markov chain Monte Carlo.
 
-        :param ndim: Dimensionality of sample space.
         :param fn: Function to integrate and sample according to.
         :param channels: Channels object for importance sampling.
         :param sample_local: Markov update (sampler) to explore locally.
@@ -31,7 +31,7 @@ class AbstractMC3(object):
         self.mc_importance = MultiChannelMC(channels)
 
         self.sample_is = DefaultMetropolis(
-            self.ndim, self.fn, self.channels.proposal, self.channels.pdf)
+            self.ndim, self.fn, self.channels)
 
         self.sample_local = sample_local
 
@@ -101,32 +101,25 @@ class AbstractMC3(object):
 class MC3Uniform(AbstractMC3):
 
     def __init__(self, fn, channels, delta, beta=.5):
-
-        sample_local = DefaultMetropolis(channels.ndim, fn, self.generate_local)
+        ndim = channels.ndim
+        sample_local = DefaultMetropolis(ndim, fn, UniformLocal(ndim, delta))
         super().__init__(fn, channels, sample_local, beta)
 
         if np.ndim(delta) == 0:
-            delta = np.ones(self.ndim) * delta
-        elif len(delta) == self.ndim:
+            delta = np.ones(ndim) * delta
+        elif len(delta) == ndim:
             delta = np.array(delta)
         else:
             raise ValueError("delta must be a float or an array of "
                              "length ndim.")
-        self.delta = delta
 
-    def generate_local(self, state):
-        """ Uniformly generate a point in a self.delta environment.
+    @property
+    def delta(self):
+        return self.sample_local.delta
 
-        If state is close to the edges in a dimension, the uniform range
-        is asymmetric such that the length is preserved but within the unit
-        hypercube [0, 1]^ndim.
-
-        :param state: The state (point) around which to sample.
-        :return: Numpy array of length self.ndim
-        """
-        base = np.maximum(np.zeros(self.ndim), state - self.delta / 2)
-        base_capped = np.minimum(base, np.ones(self.ndim) - self.delta)
-        return base_capped + np.random.rand() * self.delta
+    @delta.setter
+    def delta(self, delta):
+        self.sample_local.delta = delta
 
 
 class MC3Hamilton(AbstractMC3):

@@ -15,6 +15,7 @@ class PlainMC3Test(TestCase):
         mc3_sampler = MC3Uniform(fn, channels, delta=.01, beta=1)
 
         res = mc3_sampler(([], [500] * 40, []), count, initial=.5, log_every=0)
+        self.assertTrue(mc3_sampler.sample_is.is_hasting)
         self.assertEqual(res.data.shape, (count, 1))
 
 
@@ -30,7 +31,7 @@ class HamiltonMC3Test(TestCase):
             return 10 * np.cos(10 * x)
 
         channels = MultiChannel([densities.Uniform(1)])
-        pdf = as_dist(fn, ndim=1, pdf_gradient=dfn)
+        pdf = Density.make(fn, ndim=1, pdf_gradient=dfn)
         mc3_sampler = MC3Hamilton(pdf, channels, np.ones(1),
                                   steps=10, step_size=.1, beta=1)
 

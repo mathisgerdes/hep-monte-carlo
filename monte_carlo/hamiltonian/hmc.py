@@ -40,7 +40,6 @@ class HamiltonianUpdate(MetropolisUpdate):
             A custom implementation must follow that of HamiltonLeapfrog.
         """
         super().__init__(target_density.ndim, target_density.pdf, is_adaptive)
-        self.is_hasting = False
         self.p_dist = p_dist
         self.target_density = target_density
 

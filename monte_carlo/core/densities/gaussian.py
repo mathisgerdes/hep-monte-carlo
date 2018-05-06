@@ -1,14 +1,14 @@
 import numpy as np
 from scipy.stats import multivariate_normal as multi_norm
 
-from .base import Distribution
+from ..density import Distribution
 from ..util import interpret_array
 
 
 class Gaussian(Distribution):
 
     def __init__(self, ndim, mu=0, cov=None, scale=None):
-        super().__init__(ndim, True)
+        super().__init__(ndim, False)
 
         self._mean = None
         self._cov = None

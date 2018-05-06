@@ -1,17 +1,22 @@
 import numpy as np
-from .metropolis import MetropolisUpdate, MetropolisState
+from .metropolis import DefaultMetropolis, MetropolisState
 
 
-class AdaptiveMetropolisUpdate(MetropolisUpdate):
+class AdaptiveMetropolisUpdate(DefaultMetropolis):
     """
     adaptive Metropolis-Hastings sampler according to Haario (2001)
     """
 
-    def __init__(self, ndim, target_pdf, proposal_dist,
+    def __init__(self, ndim, target_pdf, proposal,
                  t_initial, adapt_schedule):
-        super().__init__(ndim, target_pdf, is_adaptive=True)
+        super().__init__(ndim, target_pdf, proposal)
+        self.is_adaptive = True
 
-        self.proposal_dist = proposal_dist
+        try:
+            _ = proposal.cov
+        except AttributeError:
+            raise RuntimeError("Adaptive Metropolis only works with proposals "
+                               "that expose a 'cov' attribute.")
 
         self.t_initial = t_initial
         self.adapt_schedule = adapt_schedule
@@ -20,14 +25,7 @@ class AdaptiveMetropolisUpdate(MetropolisUpdate):
         
         self.mean = None
         self.mean_previous = None
-        self.cov = self.proposal_dist.cov
-
-    def proposal(self, state):
-        prop = self.proposal_dist.proposal()
-        return MetropolisState(prop, pdf=self.pdf(prop))
-
-    def proposal_pdf(self, state, candidate):
-        return self.proposal_dist(candidate)
+        self.cov = self._proposal.cov
     
     def adapt(self, t, prev, current, accept):
         if not type(current) is np.ndarray:
@@ -46,12 +44,8 @@ class AdaptiveMetropolisUpdate(MetropolisUpdate):
                     self.epsilon*np.identity(self.ndim))
         
             if self.adapt_schedule(t) is True:
-                self.proposal_dist.cov = self.cov
+                self._proposal.cov = self.cov
 
-    def sample(self, sample_size, initial, out_mask=None, log_every=5000):
-        sample = super().sample(sample_size, initial, out_mask, log_every)
-        sample.target = self.pdf
-        return sample
 
 # class RobustAdaptiveMetropolis(StaticMetropolis):
 #    """

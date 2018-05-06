@@ -112,7 +112,7 @@ class CompositeMarkovUpdate(MarkovUpdate):
             some updates only affect slices of the state.
         """
         is_adaptive = any(update.is_adaptive for update in updates)
-        super().__init__(ndim, is_adaptive)
+        super().__init__(ndim, is_adaptive=is_adaptive)
 
         self.updates = updates
         self.masks = [None if masks is None or i not in masks else masks[i]
@@ -144,7 +144,7 @@ class MixingMarkovUpdate(MarkovUpdate):
             state.
         """
         is_adaptive = any(update.is_adaptive for update in updates)
-        super().__init__(ndim, is_adaptive)
+        super().__init__(ndim, is_adaptive=is_adaptive)
 
         self.updates = updates
         self.updates_count = len(updates)

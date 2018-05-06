@@ -14,7 +14,7 @@ from ..hamiltonian import HamiltonianUpdate
 
 
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)
-class AbstractMC3(object):
+class BasicMC3(object):
     def __init__(self, fn, channels, sample_local, beta=.5):
         """ Base implementation of Multi-channel Markov chain Monte Carlo.
 
@@ -98,20 +98,12 @@ class AbstractMC3(object):
         return self.sample(sample_size, initial, **kwargs)
 
 
-class MC3Uniform(AbstractMC3):
+class MC3Uniform(BasicMC3):
 
     def __init__(self, fn, channels, delta, beta=.5):
         ndim = channels.ndim
         sample_local = DefaultMetropolis(ndim, fn, UniformLocal(ndim, delta))
         super().__init__(fn, channels, sample_local, beta)
-
-        if np.ndim(delta) == 0:
-            delta = np.ones(ndim) * delta
-        elif len(delta) == ndim:
-            delta = np.array(delta)
-        else:
-            raise ValueError("delta must be a float or an array of "
-                             "length ndim.")
 
     @property
     def delta(self):
@@ -122,7 +114,7 @@ class MC3Uniform(AbstractMC3):
         self.sample_local.delta = delta
 
 
-class MC3Hamilton(AbstractMC3):
+class MC3Hamilton(BasicMC3):
 
     def __init__(self, target_density, channels, m, steps, step_size, beta=.5):
 

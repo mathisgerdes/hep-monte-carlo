@@ -1,4 +1,4 @@
-from surrogates.surrogate_base import StaticSurrogate
+from .surrogate_base import StaticSurrogate
 from kernel_exp_family.estimators.finite.gaussian import KernelExpFiniteGaussian
 from kernel_exp_family.estimators.lite.gaussian import KernelExpLiteGaussian
 from kernel_exp_family.estimators.lite.gaussian_low_rank import KernelExpLiteGaussianLowRank

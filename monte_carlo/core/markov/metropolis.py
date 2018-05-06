@@ -21,7 +21,7 @@ class MetropolisUpdate(MarkovUpdate):
     def __init__(self, ndim, target_pdf, adaptive=False, hasting=False):
         """ Generic abstract class to represent a single Metropolis-like update.
         """
-        super().__init__(ndim, adaptive)
+        super().__init__(ndim, is_adaptive=adaptive)
         self.pdf = target_pdf
         self.is_hasting = hasting
 
@@ -113,7 +113,8 @@ class DefaultMetropolis(MetropolisUpdate):
         self._proposal = proposal
 
         # must be at the and since it calls proposal_pdf to see if it works
-        super().__init__(ndim, target_pdf, False, not proposal.is_symmetric)
+        super().__init__(ndim, target_pdf,
+                         adaptive=False, hasting=not proposal.is_symmetric)
 
     def proposal(self, state):
         candidate = self._proposal.proposal(np.asarray(state))

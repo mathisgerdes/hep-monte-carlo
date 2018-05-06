@@ -123,6 +123,10 @@ class Sample(object):
     def _repr_png_(self):
         self.plot()
 
+    def __repr__(self):
+        return (type(self).__name__ + '\n\t' + '\n\t'.join(
+            '%s: %s' % (t, e) for t, e in zip(*self._data_table())))
+
 
 # ACCEPTANCE REJECTION
 class AcceptRejectSampler(object):

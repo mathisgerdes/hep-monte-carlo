@@ -1,15 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from densities.camel import UnconstrainedCamel
+from monte_carlo.core.densities import UnconstrainedCamel
 
-target = UnconstrainedCamel()
-x = np.linspace(-3, 4, 100)
-pdf = [target.pdf(x) for x in x]
+target = UnconstrainedCamel(1)
+x = np.linspace(0, 1, 1000)
+pdf = target.pdf(x)
 print('t')
-log_pdf = [target.log_pdf(x) for x in x]
+log_pdf = target.pot(x)
 print('t2')
-pdf_gradient = [target.pdf_gradient(x) for x in x]
-log_pdf_gradient = [target.log_pdf_gradient(x) for x in x]
+pdf_gradient = target.pdf_gradient(x)
+log_pdf_gradient = target.pot_gradient(x)
 
 plt.subplot(411)
 plt.title('PDF')

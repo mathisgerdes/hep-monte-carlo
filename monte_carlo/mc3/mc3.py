@@ -15,10 +15,10 @@ from ..hamiltonian import HamiltonianUpdate
 
 # Multi Channel Markov Chain Monte Carlo (combine integral and sampling)
 class BasicMC3(object):
-    def __init__(self, fn, channels, sample_local, beta=.5):
+    def __init__(self, target, channels, sample_local, beta=.5):
         """ Base implementation of Multi-channel Markov chain Monte Carlo.
 
-        :param fn: Function to integrate and sample according to.
+        :param target: Function to integrate and sample according to.
         :param channels: Channels object for importance sampling.
         :param sample_local: Markov update (sampler) to explore locally.
         :param beta: Parameter used to decide between update mechanisms.
@@ -26,12 +26,12 @@ class BasicMC3(object):
             beta. Value must be between 0 and 1.
         """
         self.ndim = channels.ndim
-        self.fn = fn
+        self.target = target
         self.channels = channels
         self.mc_importance = MultiChannelMC(channels)
 
         self.sample_is = DefaultMetropolis(
-            self.ndim, self.fn, self.channels)
+            self.ndim, self.target.pdf, self.channels)
 
         self.sample_local = sample_local
 
@@ -49,11 +49,11 @@ class BasicMC3(object):
             importance sampling (see MonteCarloMultiImportance).
         :return: The integral and error approximates.
         """
-        self.integration_sample = self.mc_importance(self.fn, *eval_sizes)
+        self.integration_sample = self.mc_importance(self.target, *eval_sizes)
         return self.integration_sample
 
     def sample(self, sample_size, initial=None, **kwargs):
-        """ Generate a sample according to the function self.fn using MC3.
+        """ Generate a sample according to the function self.target using MC3.
 
         Call only after mixing_sampler has been initialized (see __call__).
 
@@ -66,9 +66,9 @@ class BasicMC3(object):
             it = 0
             while it < 1000:
                 initial = self.sample_is.proposal(None)
-                if self.fn(initial) != 0:
+                if self.target.pdf(initial) != 0:
                     break
-            if self.fn(*initial) == 0:
+            if self.target.pdf(initial) == 0:
                 raise RuntimeError("Could not find a suitable initial value "
                                    "using the multi channel distribution.")
 
@@ -91,7 +91,7 @@ class BasicMC3(object):
         :param sample_size: Number of samples to generate
         :param initial: Initial value in Markov chain.
         :return: Numpy array of shape (sample_size, self.ndim). The sample
-            generated, following the distribution self.fn.
+            generated, following the distribution self.target.
         """
         self.integrate(*eval_sizes)
 
@@ -102,7 +102,8 @@ class MC3Uniform(BasicMC3):
 
     def __init__(self, fn, channels, delta, beta=.5):
         ndim = channels.ndim
-        sample_local = DefaultMetropolis(ndim, fn, UniformLocal(ndim, delta))
+        sample_local = DefaultMetropolis(
+            ndim, fn.pdf, UniformLocal(ndim, delta))
         super().__init__(fn, channels, sample_local, beta)
 
     @property

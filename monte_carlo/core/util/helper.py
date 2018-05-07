@@ -108,9 +108,13 @@ class Counted(object):
         self.fn = fn
         self.count = 0
 
-    def __call__(self, *args, **kwargs):
-        self.count += 1
-        return self.fn(*args, **kwargs)
+    def __call__(self, xs, *args, **kwargs):
+        xs_arr = np.asanyarray(xs)
+        if xs_arr.ndim >= 2:
+            self.count += xs_arr.shape[0]
+        else:
+            self.count += 1
+        return self.fn(xs, *args, **kwargs)
 
 
 def count_calls(obj, *method_names):

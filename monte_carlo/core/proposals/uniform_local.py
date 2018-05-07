@@ -7,10 +7,9 @@ class UniformLocal(Proposal):
     def __init__(self, ndim, delta, sample_range=(0, 1)):
         super().__init__(ndim, True)
 
-        self.sample_min = sample_range[0]
-        self.sample_max = sample_range[1]
-        self.sample_diff = sample_range[1] - sample_range[0]
-        self.vol = np.prod(self.sample_diff)
+        self.low = sample_range[0]
+        self.high = sample_range[1]
+        self.vol = np.prod(np.diff(sample_range, axis=0))
 
         self._delta = None
         self.delta = delta
@@ -25,8 +24,8 @@ class UniformLocal(Proposal):
         :param state: The state (point) around which to sample.
         :return: Numpy array of length ndim.
         """
-        base = np.maximum(np.zeros(self.ndim), state - self.delta / 2)
-        base_capped = np.minimum(base, np.ones(self.ndim) - self.delta)
+        base = np.maximum(self.low, state - self.delta / 2)
+        base_capped = np.minimum(base, self.high - self.delta)
         return base_capped + np.random.rand() * self.delta
 
     def proposal_pdf(self, state, candidate):

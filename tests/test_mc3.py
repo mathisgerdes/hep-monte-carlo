@@ -12,7 +12,8 @@ class PlainMC3Test(TestCase):
         def fn(x):
             return np.sin(10 * x)
         channels = MultiChannel([densities.Uniform(1)])
-        mc3_sampler = MC3Uniform(fn, channels, delta=.01, beta=1)
+        mc3_sampler = MC3Uniform(Density.make(fn, 1),
+                                 channels, delta=.01, beta=1)
 
         res = mc3_sampler(([], [500] * 40, []), count, initial=.5, log_every=0)
         self.assertTrue(mc3_sampler.sample_is.is_hasting)

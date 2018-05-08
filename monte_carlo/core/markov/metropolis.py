@@ -6,7 +6,8 @@ from ..densities import Uniform
 class MetropolisState(np.ndarray):
     def __new__(cls, input_array, pdf=None):
         obj = np.array(input_array, copy=False, subok=True, ndmin=1).view(cls)
-        obj.pdf = pdf
+        if pdf is not None:
+            obj.pdf = pdf
         return obj
 
     def __array_finalize__(self, obj):

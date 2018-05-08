@@ -9,7 +9,8 @@ from .simulation import HamiltonLeapfrog
 class HamiltonState(MetropolisState):
     def __new__(cls, input_array, momentum=None, **kwargs):
         obj = super().__new__(cls, input_array, **kwargs)
-        obj.momentum = momentum
+        if momentum is not None:
+            obj.momentum = momentum
         return obj
 
     def __array_finalize__(self, obj):

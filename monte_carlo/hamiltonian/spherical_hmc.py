@@ -18,9 +18,11 @@ class SphericalHMCState(HamiltonState):
     def __new__(cls, input_array, theta=None, tag=None, pot_gradient=None,
                 **kwargs):
         obj = super().__new__(cls, input_array, **kwargs)
-        obj.theta = theta
-        obj.tag = tag
-        obj.pot_gradient = pot_gradient
+        if theta is not None:
+            obj.theta = theta
+        obj.tag = tag  # tag is reset
+        if pot_gradient is not None:
+            obj.pot_gradient = pot_gradient
         return obj
 
     def __array_finalize__(self, obj):

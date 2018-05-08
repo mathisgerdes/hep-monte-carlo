@@ -161,6 +161,7 @@ class MixingMarkovUpdate(MarkovUpdate):
     def next_state(self, state, iteration):
         index = np.random.choice(self.updates_count, p=self.weights)
         if self.masks[index] is None:
+            state = self.updates[index].init_state(state)
             return self.updates[index].next_state(state, iteration)
         else:
             mask = self.masks[index]

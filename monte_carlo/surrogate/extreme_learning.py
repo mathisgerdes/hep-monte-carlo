@@ -15,33 +15,43 @@ class FunctionBasis(object):
     def random_params(self, node_count):
         raise NotImplementedError
 
-    def eval_all(self, params, out_bias, out_weights, *xs):
-        if len(xs) == 1:
-            xs_arr = np.array(xs[0], copy=False, subok=True, ndmin=1)
-            xs_arr = assure_2d(xs_arr)
-            out = np.dot(self.output_matrix(xs_arr, params), out_weights)
-            return out + out_bias
-        else:
-            first = np.array(xs[0], copy=False, subok=True)
-            shape = first.shape
-            size = first.size
-            xs_arr = np.array(xs, copy=False, subok=True).reshape(len(xs), size)
-            xs_arr = assure_2d(xs_arr.transpose())
-            out = self.eval_all(params, out_bias, out_weights, xs_arr)
-            return out.reshape(shape)
-
-    def eval(self, params, out_bias, out_weights, x):
+    def eval(self, params, out_bias, out_weights, xs):
         """
-
         :param out_bias: Output bias
         :param params: Parameters about the basis functions (position etc).
         :param out_weights: Numpy array of the individual function weights.
-        :param x: Numpy value, position to evaluate function at.
+        :param xs: Numpy value, position to evaluate function at.
         :return: The approximated function value at the given position.
         """
-        xs = np.array(x, copy=False, subok=True, ndmin=2)
-        out = np.dot(self.output_matrix(xs, params), out_weights)[0]
+        xs = np.array(xs, copy=False, subok=True, ndmin=2)
+
+        out = np.dot(self.output_matrix(xs, params), out_weights)
         return out + out_bias
+
+    def eval_split(self, params, out_bias, out_weights, *xs):
+        if np.isscalar(xs[0]):
+            # xs are numbers
+            xs = np.stack(xs, axis=0)
+            return self.eval(params, out_bias, out_weights, xs)
+        else:
+            shape = np.asanyarray(xs[0]).shape
+            xs = np.stack([np.asanyarray(x).flatten() for x in xs], axis=1)
+            res = self.eval(params, out_bias, out_weights, xs)
+            return res.reshape(shape)
+
+    def eval_gradient(self, params, out_bias, out_weights, xs):
+        raise NotImplementedError()
+
+    def eval_gradient_split(self, params, out_bias, out_weights, *xs):
+        if np.isscalar(xs[0]):
+            # xs are numbers
+            xs = np.stack(xs, axis=0)
+            return self.eval_gradient(params, out_bias, out_weights, xs)
+        else:
+            shape = np.asanyarray(xs[0]).shape
+            xs = np.stack([np.asanyarray(x).flatten() for x in xs], axis=1)
+            res = self.eval_gradient(params, out_bias, out_weights, xs)
+            return res.reshape((*shape, self.dim))
 
     def extreme_learning_train(self, xs, values, node_count, params=None):
         xs = assure_2d(xs)
@@ -66,10 +76,10 @@ class AdditiveBasis(FunctionBasis):
         "Hamiltonian Monte Carlo acceleration using surrogate
         functions with random bases" (ArXiv ID: 1506.05555):
 
-        If the input is xi and the input weights are wi with biases bi
+        If the input is xj and the input weights are wi with biases bi
         (the index i corresponds to the i-th node), the output is
-        z(xi) = sum_i gi(wi * xi + bi),
-        where the wi and xi are all ndim-dimensional and bi are scalars,
+        z(xj) = sum_i gi(wi * xj + bi),
+        where the wi and xj are all ndim-dimensional and bi are scalars,
         gi are the activation functions.
 
 
@@ -98,19 +108,24 @@ class AdditiveBasis(FunctionBasis):
         self.bias_min = bias_range[0]
         self.bias_delta = bias_range[1] - bias_range[0]
 
-    def get_outputs(self, inputs, fn_params):
+    def basis_function(self, inputs, fn_params):
+        raise NotImplementedError
+
+    def basis_function_gradient(self, inputs, fn_params):
         raise NotImplementedError
 
     def random_fn_params(self, node_count):
         raise NotImplementedError
 
-    def output_matrix(self, xs, params):
+    def output_matrix(self, xs, params, fn=None):
         biases, in_weights, fn_params = params
+        if fn is None:
+            fn = self.basis_function
 
         # inputs: node_count * ndim
         inputs = biases[np.newaxis, :] + np.dot(xs, in_weights.transpose())
 
-        outputs = self.get_outputs(inputs, fn_params)
+        outputs = fn(inputs, fn_params)
         return outputs
 
     def random_params(self, node_count):
@@ -122,10 +137,18 @@ class AdditiveBasis(FunctionBasis):
 
         return biases, input_weights, self.random_fn_params(node_count)
 
+    def eval_gradient(self, params, out_bias, out_weights, xs):
+        xs = np.array(xs, copy=False, subok=True, ndmin=2)
+
+        out = np.dot(
+            self.output_matrix(xs, params, self.basis_function_gradient),
+            out_weights[:, np.newaxis] * params[1])
+        return out
+
 
 class RadialBasis(FunctionBasis):
 
-    def __init__(self, dim, width_range=(0, 1), center_range=(0, 1),
+    def __init__(self, dim, width_range=(.01, 1), center_range=(0, 1),
                  multi_widths=False):
         """ Linear combination of input followed by non-linear function.
 
@@ -133,7 +156,7 @@ class RadialBasis(FunctionBasis):
         (s.t. -ci is the bias) and N widths wi to approximate
         the output to xi input points (wi are N dimensional if multi_widths is
         True, otherwise 1 dimensional):
-        z(xi) = sum_i gi( | (xi + bi) / wi |)
+        z(xi) = sum_i gi( | (xi + bi) / (2wi) |)
         where gi are activation functions taking 1D inputs.
 
         :param dim: Dimensionality of variable space (value space is 1D)
@@ -155,27 +178,32 @@ class RadialBasis(FunctionBasis):
 
         self.multi_width = multi_widths
 
-    def get_outputs(self, inputs, fn_params):
+    def basis_function(self, inputs, fn_params):
+        raise NotImplementedError
+
+    def basis_function_gradient(self, inputs, fn_params):
         raise NotImplementedError
 
     def random_fn_params(self, node_count):
         raise NotImplementedError
 
-    def output_matrix(self, xs, params):
+    def output_matrix(self, xs, params, fn=None):
         xs = assure_2d(xs)
         centers, widths, fn_params = params
+        if fn is None:
+            fn = self.basis_function
 
         # inputs: xs.size * node_count * ndim
         inputs = xs[:, np.newaxis, :] - centers[np.newaxis, :, :]
         if self.multi_width:
             # inputs: (xs.size * node_count * ndim) / (node_count * ndim)
             inputs = inputs / widths
-            inputs = np.linalg.norm(inputs, axis=2)
+            inputs = np.linalg.norm(inputs, axis=2) ** 2 / 2
         else:
-            inputs = np.linalg.norm(inputs, axis=2)  # take norm
-            inputs /= widths
+            inputs = np.linalg.norm(inputs, axis=2) / widths  # take norm
+            inputs = inputs ** 2 / 2
 
-        outputs = self.get_outputs(inputs, fn_params)
+        outputs = fn(inputs, fn_params)
         return outputs
 
     def random_params(self, node_count):
@@ -190,6 +218,16 @@ class RadialBasis(FunctionBasis):
             widths = self.weight_min + self.weight_delta * widths
 
         return centers, widths, self.random_fn_params(node_count)
+
+    def eval_gradient(self, params, out_bias, out_weights, xs):
+        xs = np.array(xs, copy=False, subok=True, ndmin=2)
+        centers, widths, fn_params = params
+
+        out_mat = self.output_matrix(xs, params, self.basis_function_gradient)
+        # j: data index, i: node index, k: dimension index
+        out = np.einsum('ji,i,jik->jk', out_mat, out_weights / widths ** 2,
+                        (xs[:, np.newaxis, :] - centers[np.newaxis, :, :]))
+        return out
 
 
 # CONCRETE ADDITIVE BASES
@@ -212,8 +250,11 @@ class TrigBasis(AdditiveBasis):
         """
         super().__init__(dim, weight_range, bias_range)
 
-    def get_outputs(self, inputs, fn_params):
+    def basis_function(self, inputs, fn_params):
         return np.cos(inputs)
+
+    def basis_function_gradient(self, inputs, fn_params):
+        return - np.sin(inputs)
 
     def random_fn_params(self, node_count):
         return None
@@ -222,7 +263,7 @@ class TrigBasis(AdditiveBasis):
 # CONCRETE RADIAL BASES
 class GaussianBasis(RadialBasis):
 
-    def __init__(self, ndim, width_range=(0, 1), center_range=(0, 1),
+    def __init__(self, ndim, width_range=(.01, 1), center_range=(0, 1),
                  multi_widths=False):
         """ Radial function basis using a single Gaussian as non-linearity.
 
@@ -232,7 +273,7 @@ class GaussianBasis(RadialBasis):
         >>> xs = np.random.rand(100)      # 100 random points
         >>> values = fn(xs)               # then learn using 100 nodes:
         >>> pars, bias, weights = basis.extreme_learning_train(xs, values, 100)
-        >>> val = basis.eval_all(pars, bias, weights, [.1, .2])
+        >>> val = basis.eval(pars, bias, weights, [.1, .2])
 
         :param ndim: Dimensionality of variable space (value space is 1D)
         :param width_range: Range the widths can be in. Tuple of either scalars
@@ -245,8 +286,11 @@ class GaussianBasis(RadialBasis):
         """
         super().__init__(ndim, width_range, center_range, multi_widths)
 
-    def get_outputs(self, inputs, fn_params):
-        return gauss.pdf(inputs)
+    def basis_function(self, inputs, fn_params):
+        return np.exp(-inputs)
+
+    def basis_function_gradient(self, inputs, fn_params):
+        return -np.exp(-inputs)
 
     def random_fn_params(self, node_count):
         return None

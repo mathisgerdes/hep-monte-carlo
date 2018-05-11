@@ -9,7 +9,7 @@ little or nothing is known.
 
 import numpy as np
 from .density import Density
-from .util import interpret_array, effective_sample_size
+from .util import interpret_array, effective_sample_size, bin_wise_chi2
 from .sample_plotting import plot1d, plot2d
 
 
@@ -23,6 +23,7 @@ class Sample(object):
         self.weights = None
 
         self.effective_sample_size = None
+        self.bin_wise_chi2 = None
 
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -41,7 +42,7 @@ class Sample(object):
         for i in range(len(args) // 2):
             self.extend_array(args[i], args[i + 1])
 
-    # PROPOERTIES
+    # PROPERTIES
     @property
     def size(self):
         try:
@@ -84,6 +85,8 @@ class Sample(object):
             self.update_data_target()
 
     def update_data_target(self):
+        self.bin_wise_chi2 = bin_wise_chi2(self)
+
         if self.ndim == 1:
             try:
                 self.effective_sample_size = effective_sample_size(
@@ -105,7 +108,13 @@ class Sample(object):
                   'effective sample size']
         entries = [self.size, self.mean, self.variance,
                    self.effective_sample_size]
-        return titles, [str(e) for e in entries]
+        entries = [str(e) for e in entries]
+
+        if self.bin_wise_chi2 is not None and self.bin_wise_chi2[0] is not None:
+            entries.append('%.4g, p=%.4g' % self.bin_wise_chi2)
+            titles.append('bin-wise chi^2')
+
+        return titles, entries
 
     def _html_list(self):
         titles, entries = self._data_table()
@@ -169,7 +178,7 @@ class AcceptRejectSampler(object):
         self.sampling = sampling
         self.sampling_pdf = sampling_pdf
 
-    def sample(self, sample_size):
+    def sample(self, sample_size, statistics=True):
         """ Generate a sample according to self.pdf of given size.
 
         :param sample_size: Number of samples
@@ -184,4 +193,7 @@ class AcceptRejectSampler(object):
                 *proposal.transpose()) <= self.pdf(*proposal.transpose())
             x[indices[accept]] = proposal[accept]
             indices = indices[np.logical_not(accept)]
-        return Sample(data=x, target=self.pdf)
+        if statistics:
+            return Sample(data=x, target=self.pdf)
+        else:
+            return Sample(data=x)

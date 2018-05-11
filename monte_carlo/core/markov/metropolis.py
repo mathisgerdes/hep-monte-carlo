@@ -1,4 +1,6 @@
 import numpy as np
+
+from ..density import Density
 from .base import MarkovUpdate
 from ..densities import Uniform
 
@@ -19,11 +21,16 @@ class MetropolisState(np.ndarray):
 # METROPOLIS (HASTING) UPDATE
 class MetropolisUpdate(MarkovUpdate):
 
-    def __init__(self, ndim, target_pdf, adaptive=False, hasting=False):
+    def __init__(self, ndim, target, adaptive=False, hasting=False):
         """ Generic abstract class to represent a single Metropolis-like update.
         """
         super().__init__(ndim, is_adaptive=adaptive)
-        self.pdf = target_pdf
+        if isinstance(target, Density):
+            self.pdf = target.pdf
+            self.target = target
+        else:
+            self.pdf = target
+            self.target = None
         self.is_hasting = hasting
 
     def adapt(self, iteration, prev, state, accept):
@@ -91,13 +98,14 @@ class MetropolisUpdate(MarkovUpdate):
 
     def sample(self, sample_size, initial, out_mask=None, log_every=5000):
         sample = super().sample(sample_size, initial, out_mask, log_every)
-        sample.target = self.pdf
+        if self.target:
+            sample.target = self.target
         return sample
 
 
 class DefaultMetropolis(MetropolisUpdate):
 
-    def __init__(self, ndim, target_pdf, proposal=None):
+    def __init__(self, ndim, target, proposal=None):
         """ Use the Metropolis algorithm to generate a sample.
 
         Example:
@@ -106,7 +114,9 @@ class DefaultMetropolis(MetropolisUpdate):
             >>> sample = met.sample(1000, 0.1)   # generate 1000 samples
 
         :param ndim: Dimensionality of sample space.
-        :param target_pdf: Desired (unnormalized) probability distribution.
+        :param target: Desired (unnormalized) probability distribution.
+            Either a function accepting a numpy array of shape (ndim,) or
+            a Density object.
         :param proposal: A Proposal object.
         """
         if proposal is None:
@@ -114,7 +124,7 @@ class DefaultMetropolis(MetropolisUpdate):
         self._proposal = proposal
 
         # must be at the and since it calls proposal_pdf to see if it works
-        super().__init__(ndim, target_pdf,
+        super().__init__(ndim, target,
                          adaptive=False, hasting=not proposal.is_symmetric)
 
     def proposal(self, state):

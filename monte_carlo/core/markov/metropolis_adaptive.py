@@ -7,9 +7,9 @@ class AdaptiveMetropolisUpdate(DefaultMetropolis):
     adaptive Metropolis-Hastings sampler according to Haario (2001)
     """
 
-    def __init__(self, ndim, target_pdf, proposal,
+    def __init__(self, ndim, target, proposal,
                  t_initial, adapt_schedule):
-        super().__init__(ndim, target_pdf, proposal)
+        super().__init__(ndim, target, proposal)
         self.is_adaptive = True
 
         try:

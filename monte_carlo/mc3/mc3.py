@@ -30,8 +30,7 @@ class BasicMC3(object):
         self.channels = channels
         self.mc_importance = MultiChannelMC(channels)
 
-        self.sample_is = DefaultMetropolis(
-            self.ndim, self.target.pdf, self.channels)
+        self.sample_is = DefaultMetropolis(self.ndim, target, channels)
 
         self.sample_local = sample_local
 
@@ -103,7 +102,7 @@ class MC3Uniform(BasicMC3):
     def __init__(self, fn, channels, delta, beta=.5):
         ndim = channels.ndim
         sample_local = DefaultMetropolis(
-            ndim, fn.pdf, UniformLocal(ndim, delta))
+            ndim, fn, UniformLocal(ndim, delta))
         super().__init__(fn, channels, sample_local, beta)
 
     @property

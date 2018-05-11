@@ -4,6 +4,9 @@ Module provides methods for analyzing the statistics of a sample
 """
 
 import numpy as np
+from scipy import stats
+# from ..integration import ImportanceMC
+# from ..densities import Uniform
 
 
 def lag_auto_cov(values, k, mean=None):
@@ -33,7 +36,18 @@ def auto_corr(values):
     return acov / acov[0]
 
 
-def binwise_chi2(pdf, values, bins=400, pdf_range=None):
+def fd_bins(sample):
+    mins = np.min(sample.data, axis=0)
+    maxs = np.max(sample.data, axis=0)
+    # h=2IQR(x)N^{−1/3} -> N^{-1/(2 + d)}
+    widths = (stats.iqr(sample.data.transpose(), axis=1) *
+                  sample.size ** (- 1 / (2 + sample.ndim)))
+    bins = np.ceil((maxs - mins) / widths).astype(np.int)
+    bins = np.maximum(1, bins)
+    return np.asanyarray(bins).astype(np.int)
+
+
+def bin_wise_chi2(sample, bins=None, min_count=10, nintegral=100):
     """ Compute the bin-wise chi^2 / dof value for a given number of bins.
 
     If the distribution of points in each bin follows a Poisson distribution
@@ -41,27 +55,28 @@ def binwise_chi2(pdf, values, bins=400, pdf_range=None):
     the returned value follows a chi squared distribution with expectation
     value 1.
 
-    :param pdf: A function giving the probability density for the distribution.
-    :param values: An array of values that is supposed to follow pdf.
-    :param bins: Number of bins to count the number of points in.
-    :param pdf_range: Tuple, range over which to compare the value distribution
-        to the pdf. If None it defaults to the maximal and minimal entries
-        in the values array.
-    :return: The chi^2 / dof value.
+    Use Freedman Diaconis Estimator with scaling like in sec 3.4 Eqn 3.61 (p83):
+        Scott, D.W. (1992),
+        Multivariate Density Estimation: Theory, Practice, and Visualization,
     """
-    if pdf_range is None:
-        pdf_range = (np.min(values), np.max(values))
+    if bins is None:
+        bins = fd_bins(sample)
+    count, edges = np.histogramdd(sample.data, bins)  # type: np.ndarray, tuple
+    relevant = np.where(count >= min_count)
 
-    total = len(values)
-    bin_borders = np.linspace(*pdf_range, bins + 1)
-    bin_width = bin_borders[1] - bin_borders[0]
-    # number of samples in each bin
-    counts = np.array([np.count_nonzero((values < bin_borders[i + 1]) *
-                                        (values > bin_borders[i]))
-                       for i in range(bins)])
-    predicted_counts = np.array([total * bin_width * (pdf(bin_borders[i + 1]) +
-                                                      pdf(bin_borders[i])) / 2
-                                 for i in range(bins)])
+    expected = np.empty(len(relevant[0]))
 
-    chi2 = np.sum((counts - predicted_counts) ** 2 / predicted_counts)
-    return chi2 / (bins - 1)  # dof = bins - 1
+    vol = np.prod([edges[d][1] - edges[d][0] for d in range(sample.ndim)])
+    i = 0
+    for mi in zip(*relevant):
+        low = [edges[d][mi[d]] for d in range(sample.ndim)]
+        high = [edges[d][mi[d]+1] for d in range(sample.ndim)]
+        expected[i] = np.mean(sample.target.pdf(np.random.uniform(
+            low, high, (nintegral, sample.ndim)))) * sample.size * vol
+        i += 1
+    finals = np.where(expected >= min_count)[0]
+    f_obs = count[relevant][finals]
+    chi2, p = stats.chisquare(f_obs, f_exp=expected[finals])
+    if len(f_obs > 0):
+        return chi2 / (f_obs.size - 1), p
+    return None, None

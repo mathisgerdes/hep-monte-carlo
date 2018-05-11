@@ -25,7 +25,8 @@ def plot1d(sample, target=None):
     ax2 = plt.subplot2grid((3, 2), (1, 0), rowspan=2)
     ax2.set_title('distribution')
     # guess good binning
-    bins = int(max(10, 10 / 300 * sample.size))
+    bins = util.fd_bins(sample)
+
     ax2.hist(sample.data, bins=bins)
     if target is not None:
         minx = np.min(sample.data)
@@ -56,15 +57,15 @@ def plot2d(sample, target=None):
     ax1.legend()
 
     # guess a good binning
-    bins = int(max(10, 20 * np.sqrt(sample.size / 1000)))
+    bins = util.fd_bins(sample)
 
     ax2 = plt.subplot2grid((3, 3), (1, 0), rowspan=2)
     ax2.set_title('distribution')
     counts, xedges, yedges, im = ax2.hist2d(*sample.data.transpose(), bins=bins)
     if target is not None:
         extent = (xedges[0], xedges[-1], yedges[0], yedges[-1])
-        x = np.linspace(extent[0], extent[1], bins*10)
-        y = np.linspace(extent[2], extent[3], bins*10)
+        x = np.linspace(extent[0], extent[1], max(bins)*10)
+        y = np.linspace(extent[2], extent[3], max(bins)*10)
         mgrid = np.meshgrid(x, y)
         ax2.contour(x, y, target(*mgrid))
     plt.colorbar(im, ax=ax2)

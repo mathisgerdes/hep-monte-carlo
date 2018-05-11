@@ -28,9 +28,9 @@ def plot1d(sample, target=None):
     bins = int(max(10, 10 / 300 * sample.size))
     ax2.hist(sample.data, bins=bins)
     if target is not None:
-        minx = min(0, np.min(sample.data))
-        maxx = max(1, np.max(sample.data))
-        x = np.linspace(minx, maxx, 1000)
+        minx = np.min(sample.data)
+        maxx = np.max(sample.data)
+        x = np.linspace(min(0, minx), max(1, maxx), 1000)
         ax2.plot(x, sample.size * (maxx - minx) / bins * target.pdf(x),
                  label='target distribution')
         ax2.legend()

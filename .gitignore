@@ -109,3 +109,6 @@ mcmcmc_env
 *.swp
 
 mcmcmc.kdev4
+
+# generated in examples
+/examples/*.pdf

@@ -9,15 +9,11 @@ class MarkovSample(Sample):
 
         super().__init__(**kwargs)
 
+        self._sample_info.append(('accept_ratio', 'acceptance rate', '%f'))
+
     @property
     def accept_ratio(self):
         return self.accepted / self.size
-
-    def _data_table(self):
-        titles, entries = super()._data_table()
-        titles.append('acceptance rate')
-        entries.append(str(self.accept_ratio))
-        return titles, entries
 
 
 # MARKOV CHAIN

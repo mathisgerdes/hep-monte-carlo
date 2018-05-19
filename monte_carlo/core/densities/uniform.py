@@ -32,3 +32,7 @@ class Uniform(Distribution):
 
     def rvs(self, sample_size):
         return np.random.uniform(self.low, self.high, (sample_size, self.ndim))
+
+    def __repr__(self):
+        return type(self).__name__ + "(ndim=%s, sample_range=%s)" % (
+            self.ndim, (self.low, self.high))

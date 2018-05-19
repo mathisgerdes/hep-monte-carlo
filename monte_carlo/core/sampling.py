@@ -8,22 +8,34 @@ little or nothing is known.
 """
 
 import numpy as np
-from .density import Density
 from .util import interpret_array, effective_sample_size, bin_wise_chi2
 from .sample_plotting import plot1d, plot2d
 
+import os
+import time
+import json
+
+
+def _set(*args):
+    return all(arg is not None for arg in args)
 
 class Sample(object):
     def __init__(self, **kwargs):
-        self._data = None
-        self._target = None
+        self.data = None
+        self.target = None
 
-        self.variance = None
-        self.mean = None
-        self.weights = None
+        self._bin_wise_chi2 = None
+        self._effective_sample_size = None
+        self._variance = None
+        self._mean = None
 
-        self.effective_sample_size = None
-        self.bin_wise_chi2 = None
+        self._sample_info = [
+            ('size', 'data (size)', '%s'),
+            ('mean', 'mean', '%s'),
+            ('variance', 'variance', '%s'),
+            ('bin_wise_chi2', 'bin-wise chi^2', '%.4g, p=%.4g, N=%d'),
+            ('effective_sample_size', 'effective sample size', '%s'),
+        ]
 
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -34,13 +46,6 @@ class Sample(object):
             setattr(self, key, array)
         else:
             setattr(self, key, np.concatenate((current, array), axis=0))
-
-    def extend_all(self, *args):
-        if len(args) % 2 != 0:
-            raise RuntimeError("Must pass alternating keys and values")
-
-        for i in range(len(args) // 2):
-            self.extend_array(args[i], args[i + 1])
 
     # PROPERTIES
     @property
@@ -57,43 +62,34 @@ class Sample(object):
         except AttributeError:
             return None
 
-    # PROPERTIES TRIGGERING UPDATES
     @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, data):
-        self._data = data
-        self.update_data()
+    def mean(self):
+        if self._mean is None and _set(self.data):
+            self._mean = np.mean(self.data, axis=0)
+        return self._mean
 
     @property
-    def target(self):
-        return self._target
+    def variance(self):
+        if self._variance is None and _set(self.data):
+            self._variance = np.var(self.data, axis=0)
+        return self._variance
 
-    @target.setter
-    def target(self, target):
-        self._target = Density.make(target, self.ndim)
-        if self.data is not None:
-            self.update_data_target()
-
-    # UPDATES
-    def update_data(self):
-        self.mean = np.mean(self._data, axis=0)
-        self.variance = np.var(self._data, axis=0)
-        if self.target is not None:
-            self.update_data_target()
-
-    def update_data_target(self):
-        self.bin_wise_chi2 = bin_wise_chi2(self)
-
-        if self.ndim == 1:
+    @property
+    def effective_sample_size(self):
+        if self._effective_sample_size is None and _set(self.data, self.target):
             try:
-                self.effective_sample_size = effective_sample_size(
-                    self.data, self.target.mean, self.target.variance)
+                self._effective_sample_size = effective_sample_size(
+                    self, self.target.mean, self.target.variance)
             except AttributeError:
                 # target may not have known mean/variance
                 pass
+        return self._effective_sample_size
+
+    @property
+    def bin_wise_chi2(self):
+        if self._bin_wise_chi2 is None and _set(self.data, self.target):
+            self._bin_wise_chi2 = bin_wise_chi2(self)
+        return self._bin_wise_chi2
 
     def plot(self):
         if self.data is None:
@@ -103,20 +99,33 @@ class Sample(object):
         if self.ndim == 2:
             return plot2d(self, target=self.target)
 
-    def _data_table(self):
-        titles = ['Data (size)', 'mean', 'variance',
-                  'effective sample size']
-        entries = [self.size, self.mean, self.variance,
-                   self.effective_sample_size]
-        entries = [str(e) for e in entries]
+    def save(self, file_path=None):
+        if file_path is None:
+            file_path = type(self).__name__ + '-' + str(int(time.time()))
+        path, name = os.path.split(file_path)
 
-        if self.bin_wise_chi2 is not None and self.bin_wise_chi2[0] is not None:
-            entries.append('%.4g, p=%.4g' % self.bin_wise_chi2)
-            titles.append('bin-wise chi^2')
+        info = {entry[0]: repr(getattr(self, entry[0]))
+                for entry in self._sample_info}
+        info['type'] = type(self).__name__
+        info['target'] = repr(self.target)
+
+        np.save(os.path.join(path, name + '-data.npy'), self.data)
+        with open(os.path.join(path, name + '.json'), 'w') as fp:
+            json.dump(info, fp, indent=2)
+
+    def _data_table(self):
+        titles = [entry[1] for entry in self._sample_info]
+        entries = []
+        for entry in self._sample_info:
+            value = getattr(self, entry[0])
+            try:
+                entries.append(entry[2] % value)
+            except TypeError:
+                entries.append('N/A')
 
         return titles, entries
 
-    def _html_list(self):
+    def _repr_html_(self):
         titles, entries = self._data_table()
         info = ['<h3>' + type(self).__name__ + '</h3>',
                 '<table><tr><th style="text-align:left;">' +
@@ -124,10 +133,7 @@ class Sample(object):
                 '</th></tr><tr><td style="text-align:left;">' +
                 '</td><td style="text-align:left;">'.join(entries) +
                 '</td></tr></table>']
-        return info
-
-    def _repr_html_(self):
-        return '\n'.join(self._html_list())
+        return '\n'.join(info)
 
     def _repr_png_(self):
         self.plot()

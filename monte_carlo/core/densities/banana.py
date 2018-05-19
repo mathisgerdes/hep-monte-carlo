@@ -4,6 +4,7 @@ from scipy.stats import multivariate_normal
 import numpy as np
 from copy import copy
 
+
 class Banana(Density):
     def __init__(self, ndim, bananicity=0.1):
         super().__init__(ndim, False)
@@ -48,3 +49,7 @@ class Banana(Density):
 
         else:
             return NotImplementedError()
+
+    def __repr__(self):
+        return type(self).__name__ + "(ndim=%s, bananaicity=%s)" % (
+            self.ndim, self.b)

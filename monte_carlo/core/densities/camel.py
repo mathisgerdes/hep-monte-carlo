@@ -75,6 +75,10 @@ class UnconstrainedCamel(Density):
         else:
             self._mu_b = np.array(value, copy=False, subok=True, ndmin=1)
 
+    def __repr__(self):
+        return type(self).__name__ + "(ndim=%s, mu_a=%s, mu_b=%s, a=%s)" % (
+            self.ndim, self.mu_a, self.mu_b, np.sqrt(2*self.cov))
+
 
 class Camel(UnconstrainedCamel):
     """

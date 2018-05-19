@@ -73,3 +73,7 @@ class Gaussian(Distribution):
     def cov(self, value):
         self._cov = np.eye(self.ndim, self.ndim) * np.asanyarray(value)
         self._cov_inv = np.linalg.inv(self._cov)
+
+    def __repr__(self):
+        return type(self).__name__ + "(ndim=%s, mu=%s, cov=%s)" % (
+            self.ndim, self.mean, self.cov)

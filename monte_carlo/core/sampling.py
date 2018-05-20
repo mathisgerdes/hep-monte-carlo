@@ -19,10 +19,12 @@ import json
 def _set(*args):
     return all(arg is not None for arg in args)
 
+
 class Sample(object):
     def __init__(self, **kwargs):
         self.data = None
         self.target = None
+        self.weights = None
 
         self._bin_wise_chi2 = None
         self._effective_sample_size = None
@@ -184,7 +186,7 @@ class AcceptRejectSampler(object):
         self.sampling = sampling
         self.sampling_pdf = sampling_pdf
 
-    def sample(self, sample_size, statistics=True):
+    def sample(self, sample_size):
         """ Generate a sample according to self.pdf of given size.
 
         :param sample_size: Number of samples
@@ -199,7 +201,4 @@ class AcceptRejectSampler(object):
                 *proposal.transpose()) <= self.pdf(*proposal.transpose())
             x[indices[accept]] = proposal[accept]
             indices = indices[np.logical_not(accept)]
-        if statistics:
-            return Sample(data=x, target=self.pdf)
-        else:
-            return Sample(data=x)
+        return Sample(data=x, target=self.pdf)

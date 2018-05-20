@@ -20,8 +20,9 @@ class MarkovSample(Sample):
 class MarkovUpdate(object):
     """ Basic update mechanism of a Markov chain. """
 
-    def __init__(self, ndim, is_adaptive=False):
+    def __init__(self, ndim, is_adaptive=False, target=None):
         self.ndim = ndim
+        self.target = target
         self.is_adaptive = is_adaptive
 
         # will hold information if update was used as a sampler
@@ -92,13 +93,13 @@ class MarkovUpdate(object):
             chain[tagged[parser]] = parser(chain[tagged[parser]], tags[parser])
 
         sample.data = chain
-
+        sample.target = self.target
         return sample
 
 
 class CompositeMarkovUpdate(MarkovUpdate):
 
-    def __init__(self, ndim, updates, masks=None):
+    def __init__(self, ndim, updates, masks=None, target=None):
         """ Composite Markov update; combine updates.
 
         :param updates: List of update mechanisms, each subtypes of
@@ -108,7 +109,12 @@ class CompositeMarkovUpdate(MarkovUpdate):
             some updates only affect slices of the state.
         """
         is_adaptive = any(update.is_adaptive for update in updates)
-        super().__init__(ndim, is_adaptive=is_adaptive)
+        if target is None:
+            for update in updates:
+                if update.target is not None:
+                    target = update.target
+                    break
+        super().__init__(ndim, is_adaptive=is_adaptive, target=target)
 
         self.updates = updates
         self.masks = [None if masks is None or i not in masks else masks[i]
@@ -131,7 +137,7 @@ class CompositeMarkovUpdate(MarkovUpdate):
 
 class MixingMarkovUpdate(MarkovUpdate):
 
-    def __init__(self, ndim, updates, weights=None, masks=None):
+    def __init__(self, ndim, updates, weights=None, masks=None, target=None):
         """ Mix a number of update mechanisms, choosing one in each step.
 
         :param updates: List of update mechanisms (AbstractMarkovUpdate).
@@ -140,7 +146,12 @@ class MixingMarkovUpdate(MarkovUpdate):
             state.
         """
         is_adaptive = any(update.is_adaptive for update in updates)
-        super().__init__(ndim, is_adaptive=is_adaptive)
+        if target is None:
+            for update in updates:
+                if update.target is not None:
+                    target = update.target
+                    break
+        super().__init__(ndim, is_adaptive=is_adaptive, target=target)
 
         self.updates = updates
         self.updates_count = len(updates)

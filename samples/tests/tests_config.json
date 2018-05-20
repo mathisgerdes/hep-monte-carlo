@@ -1,0 +1,60 @@
+[
+  {
+    "name": "test-uniform",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_uniform",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2"
+    }
+  },
+  {
+    "name": "test-hmc",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2"
+    }
+  },
+  {
+    "name": "test-nuts",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_nuts",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2"
+    }
+  },
+  {
+    "name": "test-spherical-nuts",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_spherical_nuts",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2"
+    }
+  },
+  {
+    "name": "test-mc3-gauss",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "mc3_gauss",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2",
+      "centers": "[[0.5, 0.5]]",
+      "widths": "[0.5]",
+      "beta": "0.5"
+    }
+  }
+]

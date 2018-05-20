@@ -1,10 +1,12 @@
 [
   {
     "name": "vary-dim",
-    "sampler": "default_uniform_sampler.py",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_uniform",
     "size": 1000,
     "params": {
-      "initial_value": ".4"
+      "initial": ".4"
     },
     "params_vary": {
       "ndim": "np.arange(1, 5)"
@@ -12,13 +14,15 @@
   },
   {
     "name": "vary-init",
-    "sampler": "default_uniform_sampler.py",
+    "target": "densities.Camel",
+    "target_args": "{'a': 0.1}",
+    "sampler": "plain_uniform",
     "size": 10000,
     "params": {
       "ndim": "2"
     },
     "params_vary": {
-      "initial_value": "np.linspace(0.01, .99, 10)"
+      "initial": "np.linspace(0.01, .99, 10)"
     },
     "binning": "([20, 20], ([0, 0], [1, 1]))"
   }

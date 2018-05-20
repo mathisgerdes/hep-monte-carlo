@@ -62,6 +62,15 @@ def bin_wise_chi2(sample, bins=None, bin_range=None,
     the returned value follows a chi squared distribution with expectation
     value 1.
     """
+    try:
+        pdf = sample.target.pdf
+    except AttributeError:
+        def pdf(xs):
+            prob = np.empty(xs.shape[0])
+            for j, x in zip(range(prob.size), xs):
+                prob[i] = sample.target(x)
+            return prob
+
     if bins is None:
         bins = fd_bins(sample)
     count, edges = np.histogramdd(sample.data, bins, bin_range)
@@ -75,7 +84,7 @@ def bin_wise_chi2(sample, bins=None, bin_range=None,
     for mi in zip(*relevant):
         low = [edges[d][mi[d]] for d in range(sample.ndim)]
         high = [edges[d][mi[d]+1] for d in range(sample.ndim)]
-        expected[i] = np.mean(sample.target.pdf(np.random.uniform(
+        expected[i] = np.mean(pdf(np.random.uniform(
             low, high, (int_steps, sample.ndim)))) * sample.size * vol
         i += 1
     finals = np.where(expected >= min_count)[0]

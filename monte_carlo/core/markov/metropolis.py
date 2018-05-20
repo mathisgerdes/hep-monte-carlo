@@ -24,13 +24,11 @@ class MetropolisUpdate(MarkovUpdate):
     def __init__(self, ndim, target, adaptive=False, hasting=False):
         """ Generic abstract class to represent a single Metropolis-like update.
         """
-        super().__init__(ndim, is_adaptive=adaptive)
+        super().__init__(ndim, is_adaptive=adaptive, target=target)
         if isinstance(target, Density):
             self.pdf = target.pdf
-            self.target = target
         else:
             self.pdf = target
-            self.target = None
         self.is_hasting = hasting
 
     def adapt(self, iteration, prev, state, accept):
@@ -95,12 +93,6 @@ class MetropolisUpdate(MarkovUpdate):
             self.adapt(iteration, state, next_state, accept)
 
         return next_state
-
-    def sample(self, sample_size, initial, out_mask=None, log_every=5000):
-        sample = super().sample(sample_size, initial, out_mask, log_every)
-        if self.target:
-            sample.target = self.target
-        return sample
 
 
 class DefaultMetropolis(MetropolisUpdate):

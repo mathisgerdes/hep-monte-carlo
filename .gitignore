@@ -112,3 +112,5 @@ mcmcmc.kdev4
 
 # generated in examples
 /examples/*.pdf
+/samples/*/*
+!/samples/*/*_config.json

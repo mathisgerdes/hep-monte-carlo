@@ -122,7 +122,8 @@ class CompositeMarkovUpdate(MarkovUpdate):
 
     def init_adapt(self, initial_state):
         for update in self.updates:
-            update.init_adapt(initial_state)
+            state = update.init_state(initial_state)
+            update.init_adapt(state)
 
     def next_state(self, state, iteration):
         for mechanism, mask in zip(self.updates, self.masks):
@@ -163,7 +164,8 @@ class MixingMarkovUpdate(MarkovUpdate):
 
     def init_adapt(self, initial_state):
         for update in self.updates:
-            update.init_adapt(initial_state)
+            state = update.init_state(initial_state)
+            update.init_adapt(state)
 
     def next_state(self, state, iteration):
         index = np.random.choice(self.updates_count, p=self.weights)

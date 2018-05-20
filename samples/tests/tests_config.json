@@ -56,5 +56,89 @@
       "widths": "[0.5]",
       "beta": "0.5"
     }
+  },
+  {
+    "name": "test-mc3-hmc",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "mc3_hmc",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2",
+      "centers": "[[0.5, 0.5]]",
+      "widths": "[0.5]",
+      "beta": "0.5"
+    }
+  },
+  {
+    "name": "test-mc3-nuts",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "mc3_nuts",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2",
+      "centers": "[[0.5, 0.5]]",
+      "widths": "[0.5]",
+      "beta": "0.5"
+    }
+  },
+  {
+    "name": "test-mc3-sph-nuts",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "mc3_spherical_nuts",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2",
+      "centers": "[[0.5, 0.5]]",
+      "widths": "[0.5]",
+      "beta": "0.5"
+    }
+  },
+  {
+    "name": "test-mc3-sur-hmc",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "mc3_hmc_el",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2",
+      "centers": "[[0.5, 0.5]]",
+      "widths": "[0.5]",
+      "beta": "0.5"
+    }
+  },
+  {
+    "name": "test-mc3-sur-nuts",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "mc3_nuts_el",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2",
+      "centers": "[[0.5, 0.5]]",
+      "widths": "[0.5]",
+      "beta": "0.5"
+    }
+  },
+  {
+    "name": "test-mc3-sur-sph-nuts",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "mc3_spherical_nuts_el",
+    "size": 1000,
+    "params": {
+      "initial": ".4",
+      "ndim": "2",
+      "centers": "[[0.5, 0.5]]",
+      "widths": "[0.5]",
+      "beta": "0.5"
+    }
   }
 ]

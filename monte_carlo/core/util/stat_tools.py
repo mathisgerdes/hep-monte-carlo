@@ -5,35 +5,59 @@ Module provides methods for analyzing the statistics of a sample
 
 import numpy as np
 from scipy import stats
-# from ..integration import ImportanceMC
-# from ..densities import Uniform
+from .helper import interpret_array
 
 
 def lag_auto_cov(values, k, mean=None):
     if mean is None:
         mean = np.mean(values)
-    return np.sum((values[:-k] - mean) * (values[k:] - mean)) / values.shape[0]
+    return np.einsum('ij,ij->j',
+                     (values[:-k] - mean), (values[k:] - mean)) / len(values)
 
 
-def auto_cov(values):
+def auto_cov(values, mean=None, variance=None):
     """ Compute the lag-autocovariance of a given array of values.
 
     :param values: Array of values.
+    :param mean: Previously calculated or known mean.
+    :param variance: Previously calculated or known variance.
     :return: Numpy array containing at index k the k-lag autocovariance.
     """
-    mean = np.mean(values)
-    size = len(values)
-    acov = np.empty(size)
-    acov[0] = np.var(values)
-    for k in range(1, len(values)):
-        acov[k] = lag_auto_cov(values, k, mean=mean)
+    size = values.shape[0]
+    values = interpret_array(values)
+    if mean is None:
+        mean = np.mean(values, 0)
+    if variance is None:
+        variance = np.var(values, 0)
+    centered = values - mean
+    acov = np.empty_like(values)
+    acov[0] = variance
+    for k in range(1, size):
+        acov[k] = np.einsum('ij,ij->j', centered[:-k], centered[k:]) / size
     return acov
 
 
-def auto_corr(values):
+def auto_corr(values, mean=None, variance=None):
     """ Compute the autocorrelation of a given array of values. """
-    acov = auto_cov(values)
+    acov = auto_cov(values, mean, variance)
     return acov / acov[0]
+
+
+def effective_sample_size(sample, mean, var):
+    mean = interpret_array(mean, sample.ndim)
+    var = interpret_array(var, sample.ndim)
+    sum = np.zeros(sample.ndim)
+
+    acor = auto_corr(sample.data, mean, var)
+    for dim in range(sample.ndim):
+        lag = 1
+        rho = acor[lag, dim]
+        while rho >= 0.05 and lag < sample.size - 1:
+            sum[dim] = sum[dim] + (1 - lag / sample.size) * rho
+            lag = lag + 1
+            rho = acor[lag, dim]
+
+    return sample.size / (1 + 2 * sum)
 
 
 def fd_bins(sample):

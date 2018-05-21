@@ -30,8 +30,6 @@ def run_single(config, save_base, sampler_module):
     else:
         binning = None
 
-    np.random.seed(42)
-
     target = eval(config['target'])(params['ndim'],
                                     **eval(config['target_args']))
     util.count_calls(target, 'pdf', 'pot_gradient')
@@ -78,7 +76,6 @@ def run_all(config, save_base, sampler_module):
 
     index = 0
     for param_it in zip(*vary_values):
-        np.random.seed(42)
         kwargs = dict(zip(vary_names, param_it))
         kwargs.update(params)
 
@@ -116,6 +113,7 @@ def run_all(config, save_base, sampler_module):
 
 
 if __name__ == '__main__':
+    np.random.seed(42)
     config_file = sys.argv[1]
     base = os.path.split(config_file)[0]
     with open(config_file) as in_file:

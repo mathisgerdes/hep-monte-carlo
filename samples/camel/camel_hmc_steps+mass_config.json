@@ -1,0 +1,71 @@
+[
+  {
+    "name": "hmc-steps-m10-sz1",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "size": 500000,
+    "binning": "([20, 20], ([0., 0.], [1., 1.]))",
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "step_size": "1",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "steps": "np.arange(1, 30, 3)"
+    }
+  },
+  {
+    "name": "hmc-steps-m10-sz.1",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "size": 500000,
+    "binning": "([20, 20], ([0., 0.], [1., 1.]))",
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "step_size": ".1",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "steps": "np.arange(1, 30, 3)"
+    }
+  },
+  {
+    "name": "hmc-steps-m10-sz.01",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "size": 500000,
+    "binning": "([20, 20], ([0., 0.], [1., 1.]))",
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "step_size": ".01",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "steps": "np.arange(1, 30, 3)"
+    }
+  },
+
+  {
+    "name": "hmc-mass-s10-sz.01",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "size": 500000,
+    "binning": "([20, 20], ([0., 0.], [1., 1.]))",
+    "params": {
+      "initial": ".4",
+      "steps": "10",
+      "step_size": ".1",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "mass": "np.linspace(.05, 10, 10)"
+    }
+  }
+]

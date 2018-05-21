@@ -84,7 +84,7 @@ class MarkovUpdate(object):
                 pass
 
             if log_every > 0 and (i + 1) % log_every == 0:
-                print("Generated %d samples." % (i + 1))
+                print("Generated %d samples." % (i + 1), flush=True)
 
         if out_mask is not None:
             chain = chain[:, out_mask]

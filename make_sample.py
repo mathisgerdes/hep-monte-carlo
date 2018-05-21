@@ -20,7 +20,7 @@ def run(config, dir_base):
 
 
 def run_single(config, save_base, sampler_module):
-    print(config['name'])
+    print(config['name'], flush=True)
     params = config['params']
     for param in params:
         params[param] = eval(params[param])
@@ -42,12 +42,12 @@ def run_single(config, save_base, sampler_module):
     if binning is not None:
         sample._bin_wise_chi2 = util.bin_wise_chi2(sample, *binning)
 
-    print(sample)
+    print(sample, flush=True)
     sample.save(os.path.join(save_base, 'sample'))
 
 
 def run_all(config, save_base, sampler_module):
-    print(config['name'])
+    print(config['name'], flush=True)
     params = config['params']
     for param in params:
         params[param] = eval(params[param])
@@ -86,7 +86,7 @@ def run_all(config, save_base, sampler_module):
         util.count_calls(target, 'pdf', 'pot_gradient')
 
         sampler, init = sampler_module.get_sampler(target, **kwargs)
-        print(config['name'] + ", run %d" % (index + 1))
+        print(config['name'] + ", run %d" % (index + 1), flush=True)
         sample = sampler.sample(config['size'], init)
 
         # should be evaluated before calling bin chi^2

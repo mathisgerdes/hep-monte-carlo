@@ -1,0 +1,34 @@
+(run){
+  % general settings
+  EVENTS 2000;
+  SHERPA_LDADD SherpaMain;
+
+  % model parameters
+  HARD_DECAYS Off;
+  MI_HANDLER None;
+  FRAGMENTATION Off;
+  SHOWER_GENERATOR None;
+  PDF_LIBRARY None;
+
+  SCALES VAR{sqr(E_CMS)};  
+}(run)
+
+(isr){
+  PDF_LIBRARY None;
+}(isr)
+
+(beam){
+  % collider setup
+  
+  BEAM_1  11; BEAM_ENERGY_1 1000.;
+  BEAM_2 -11; BEAM_ENERGY_2 1000.;
+  
+}(beam)
+
+(processes){
+  Process 11 -11 -> 1 -1;
+  Order (0,2);
+  End process;
+}(processes)
+
+

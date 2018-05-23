@@ -112,8 +112,7 @@ mcmcmc.kdev4
 
 # generated in examples
 /examples/*.pdf
-/samples/*/*
-!/samples/*/*_config.json
+/samples/*/out
 
 # pycharm
 /.idea/

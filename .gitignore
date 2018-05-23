@@ -114,3 +114,6 @@ mcmcmc.kdev4
 /examples/*.pdf
 /samples/*/*
 !/samples/*/*_config.json
+
+# pycharm
+/.idea/

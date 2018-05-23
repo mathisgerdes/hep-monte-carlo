@@ -1,0 +1,426 @@
+[
+  {
+    "name": "hmc-stepsize-m.5-s5",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": ".5",
+      "steps": "5",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m.5-s10",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": ".5",
+      "steps": "10",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m.5-s15",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": ".5",
+      "steps": "15",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m.5-s50",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": ".5",
+      "steps": "50",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+
+
+
+  {
+    "name": "hmc-stepsize-m1-s5",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "1",
+      "steps": "5",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m1-s10",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "1",
+      "steps": "10",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m1-s15",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "1",
+      "steps": "15",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m1-s50",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "1",
+      "steps": "50",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+
+
+
+  {
+    "name": "hmc-stepsize-m2-s5",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "2",
+      "steps": "5",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m2-s10",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "2",
+      "steps": "10",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m2-s15",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "2",
+      "steps": "15",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m2-s50",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "2",
+      "steps": "50",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+
+
+
+
+  {
+    "name": "hmc-stepsize-m5-s5",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "5",
+      "steps": "5",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m5-s10",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "5",
+      "steps": "10",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m5-s15",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "5",
+      "steps": "15",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m5-s50",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "5",
+      "steps": "50",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+
+
+
+  {
+    "name": "hmc-stepsize-m10-s5",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "steps": "5",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m10-s10",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "steps": "10",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m10-s15",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "steps": "15",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m10-s50",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "steps": "50",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+
+
+
+  {
+    "name": "hmc-stepsize-m30-s5",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "30",
+      "steps": "5",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m30-s10",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "30",
+      "steps": "10",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m30-s15",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "30",
+      "steps": "15",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m30-s50",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "(100, (0., 1.)",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "30",
+      "steps": "50",
+      "ndim": "1"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  }
+]

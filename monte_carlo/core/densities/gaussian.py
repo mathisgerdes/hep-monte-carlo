@@ -34,7 +34,8 @@ class Gaussian(Distribution):
 
     def pdf_gradient(self, xs):
         xs = interpret_array(xs, self.ndim)
-        return - (xs - self.mean) / self.cov * self.pdf(xs)[:, np.newaxis]
+        return - (np.dot(self._cov_inv, (xs - self.mean)) *
+                  self.pdf(xs)[:, np.newaxis])
 
     def pot(self, xs):
         xs = interpret_array(xs, self.ndim)

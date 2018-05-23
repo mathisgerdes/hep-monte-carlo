@@ -19,7 +19,7 @@ def get_sampler(target, ndim, initial, centers, widths, beta,
 
     is_sampler = DefaultMetropolis(ndim, target, channels)
 
-    momentum_dist = densities.Gaussian(ndim, scale=mass)
+    momentum_dist = densities.Gaussian(ndim, scale=1/mass)
     local_sampler = NUTSUpdate(target, momentum_dist, lambda t: t <= nadapt)
 
     updates = [is_sampler, local_sampler]

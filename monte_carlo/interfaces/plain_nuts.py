@@ -7,7 +7,7 @@ def get_sampler(target, ndim, initial, mass=10, nadapt=100):
     if np.isscalar(initial):
         initial = np.full(ndim, initial)
 
-    momentum_dist = Gaussian(ndim, scale=mass)
+    momentum_dist = Gaussian(ndim, scale=1/mass)
     sampler = NUTSUpdate(target, momentum_dist, lambda t: t <= nadapt)
 
     return sampler, initial

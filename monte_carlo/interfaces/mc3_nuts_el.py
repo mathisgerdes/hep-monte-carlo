@@ -36,7 +36,7 @@ def get_sampler(target, ndim, initial, centers, widths, beta,
     util.count_calls(target, 'pot_gradient')
 
     # local sampler
-    momentum_dist = densities.Gaussian(ndim, scale=mass)
+    momentum_dist = densities.Gaussian(ndim, scale=1/mass)
     local_sampler = NUTSUpdate(target, momentum_dist, lambda t: t <= nadapt)
 
     updates = [is_sampler, local_sampler]

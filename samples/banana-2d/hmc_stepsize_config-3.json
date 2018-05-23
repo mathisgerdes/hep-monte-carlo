@@ -1,0 +1,145 @@
+[
+
+
+
+
+  {
+    "name": "hmc-stepsize-m10-s5",
+    "target": "densities.Banana",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "steps": "5",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m10-s10",
+    "target": "densities.Banana",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "steps": "10",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m10-s15",
+    "target": "densities.Banana",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "steps": "15",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m10-s50",
+    "target": "densities.Banana",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "10",
+      "steps": "50",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+
+
+
+  {
+    "name": "hmc-stepsize-m30-s5",
+    "target": "densities.Banana",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "30",
+      "steps": "5",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m30-s10",
+    "target": "densities.Banana",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "30",
+      "steps": "10",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m30-s15",
+    "target": "densities.Banana",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "30",
+      "steps": "15",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  },
+  {
+    "name": "hmc-stepsize-m30-s50",
+    "target": "densities.Banana",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 50000,
+    "params": {
+      "initial": ".4",
+      "mass": "30",
+      "steps": "50",
+      "ndim": "2"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 2, 80)"
+    }
+  }
+]

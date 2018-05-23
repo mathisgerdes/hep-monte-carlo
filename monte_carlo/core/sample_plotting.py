@@ -9,7 +9,7 @@ def plot_lag_autocor(axis, array):
         acor = util.auto_corr(array)
     else:
         ks = np.arange(300)
-        acor = util.auto_corr(array[:300])
+        acor = util.auto_corr(array[:300]).flatten()
     axis.bar(ks, acor, width=1)
 
 
@@ -57,7 +57,7 @@ def plot2d(sample, target=None):
     ax1.legend()
 
     # guess a good binning
-    bins = util.fd_bins(sample)
+    bins = util.fd_bins(sample)[0]
 
     ax2 = plt.subplot2grid((3, 3), (1, 0), rowspan=2)
     ax2.set_title('distribution')

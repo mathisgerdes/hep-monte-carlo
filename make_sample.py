@@ -97,6 +97,7 @@ class RunIterator(object):
 
 if __name__ == '__main__':
     config_file = sys.argv[1]
+    base = os.path.split(config_file)[0]
     dir_base = os.path.join(base, 'out')
     if not os.path.exists(dir_base):
         os.makedirs(dir_base)

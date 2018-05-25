@@ -1,14 +1,14 @@
 [
   {
-    "name": "hmc-stepsize-m.5-s5",
+    "name": "hmc-stepsize-m7.1-s5",
     "target": "densities.Banana",
     "target_args": "{}",
     "sampler": "plain_hmc",
-    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
-    "size": 50000,
+    "binning": "([15, 15],)",
+    "size": 10000,
     "params": {
       "initial": ".4",
-      "mass": ".5",
+      "mass": "7.1",
       "steps": "5",
       "ndim": "2"
     },
@@ -17,15 +17,15 @@
     }
   },
   {
-    "name": "hmc-stepsize-m.5-s10",
+    "name": "hmc-stepsize-m7.1-s10",
     "target": "densities.Banana",
     "target_args": "{}",
     "sampler": "plain_hmc",
-    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
-    "size": 50000,
+    "binning": "([15, 15],)",
+    "size": 10000,
     "params": {
       "initial": ".4",
-      "mass": ".5",
+      "mass": "7.1",
       "steps": "10",
       "ndim": "2"
     },
@@ -34,15 +34,15 @@
     }
   },
   {
-    "name": "hmc-stepsize-m.5-s15",
+    "name": "hmc-stepsize-m7.1-s15",
     "target": "densities.Banana",
     "target_args": "{}",
     "sampler": "plain_hmc",
-    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
-    "size": 50000,
+    "binning": "([15, 15],)",
+    "size": 10000,
     "params": {
       "initial": ".4",
-      "mass": ".5",
+      "mass": "7.1",
       "steps": "15",
       "ndim": "2"
     },
@@ -51,15 +51,15 @@
     }
   },
   {
-    "name": "hmc-stepsize-m.5-s50",
+    "name": "hmc-stepsize-m7.1-s50",
     "target": "densities.Banana",
     "target_args": "{}",
     "sampler": "plain_hmc",
-    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
-    "size": 50000,
+    "binning": "([15, 15],)",
+    "size": 10000,
     "params": {
       "initial": ".4",
-      "mass": ".5",
+      "mass": "7.1",
       "steps": "50",
       "ndim": "2"
     },
@@ -71,15 +71,15 @@
 
 
   {
-    "name": "hmc-stepsize-m1-s5",
+    "name": "hmc-stepsize-m6.1-s5",
     "target": "densities.Banana",
     "target_args": "{}",
     "sampler": "plain_hmc",
-    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
-    "size": 50000,
+    "binning": "([15, 15],)",
+    "size": 10000,
     "params": {
       "initial": ".4",
-      "mass": "1",
+      "mass": "6.1",
       "steps": "5",
       "ndim": "2"
     },
@@ -88,15 +88,15 @@
     }
   },
   {
-    "name": "hmc-stepsize-m1-s10",
+    "name": "hmc-stepsize-m6.1-s10",
     "target": "densities.Banana",
     "target_args": "{}",
     "sampler": "plain_hmc",
-    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
-    "size": 50000,
+    "binning": "([15, 15],)",
+    "size": 10000,
     "params": {
       "initial": ".4",
-      "mass": "1",
+      "mass": "6.1",
       "steps": "10",
       "ndim": "2"
     },
@@ -105,15 +105,15 @@
     }
   },
   {
-    "name": "hmc-stepsize-m1-s15",
+    "name": "hmc-stepsize-m6.1-s15",
     "target": "densities.Banana",
     "target_args": "{}",
     "sampler": "plain_hmc",
-    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
-    "size": 50000,
+    "binning": "([15, 15],)",
+    "size": 10000,
     "params": {
       "initial": ".4",
-      "mass": "1",
+      "mass": "6.1",
       "steps": "15",
       "ndim": "2"
     },
@@ -122,15 +122,15 @@
     }
   },
   {
-    "name": "hmc-stepsize-m1-s50",
+    "name": "hmc-stepsize-m6.1-s50",
     "target": "densities.Banana",
     "target_args": "{}",
     "sampler": "plain_hmc",
-    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
-    "size": 50000,
+    "binning": "([15, 15],)",
+    "size": 10000,
     "params": {
       "initial": ".4",
-      "mass": "1",
+      "mass": "6.1",
       "steps": "50",
       "ndim": "2"
     },

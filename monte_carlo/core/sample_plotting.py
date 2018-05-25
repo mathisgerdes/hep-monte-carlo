@@ -25,7 +25,7 @@ def plot1d(sample, target=None):
     ax2 = plt.subplot2grid((3, 2), (1, 0), rowspan=2)
     ax2.set_title('distribution')
     # guess good binning
-    bins = util.fd_bins(sample)
+    bins = util.fd_bins(sample)[0]
 
     ax2.hist(sample.data, bins=bins)
     if target is not None:
@@ -57,7 +57,7 @@ def plot2d(sample, target=None):
     ax1.legend()
 
     # guess a good binning
-    bins = util.fd_bins(sample)[0]
+    bins = util.fd_bins(sample)
 
     ax2 = plt.subplot2grid((3, 3), (1, 0), rowspan=2)
     ax2.set_title('distribution')

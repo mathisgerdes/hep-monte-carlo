@@ -95,19 +95,11 @@ class RunIterator(object):
         with open(self.save_base + '.json', 'w') as out_file:
             json.dump(results, out_file, indent=2)
 
-def find_out_dir(config_file):
-    base = os.path.split(config_file)[0]
-    if not os.path.isdir(os.path.join(base, 'out')):
-        return os.path.join(base, 'out')
-    index = 1
-    while os.path.isdir(os.path.join(base, 'out-%d' % index)):
-        index += 1
-    return os.path.join(base, 'out-%d' % index)
-
 if __name__ == '__main__':
     config_file = sys.argv[1]
-    dir_base = find_out_dir(config_file)
-    os.makedirs(dir_base)
+    dir_base = os.path.join(base, 'out')
+    if not os.path.exists(dir_base):
+        os.makedirs(dir_base)
 
     with open(config_file) as in_file:
         configs = json.load(in_file)

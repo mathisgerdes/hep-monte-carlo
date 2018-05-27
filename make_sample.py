@@ -6,7 +6,6 @@ import numpy as np
 from monte_carlo import *
 
 
-sampler_module = None
 dir_base = None
 
 
@@ -77,20 +76,21 @@ def run(config):
             config['params_vary'][key] = eval(config['params_vary'][key])
 
     if 'repeats' in config:
-        return _run_averaging(config)
+        _run_averaging(config)
 
     else:
-        return _run(config)
+        _run(config)
+    print('CONFIG %s DONE' % config['name'], flush=True)
 
 
 def run_single(config, params=None, name='sample', save=True):
     if params is None:
         params = config['params']
-    print("STARTING RUN " + str(params))
+    print("STARTING RUN " + str(params), flush=True)
     np.random.seed()  # important for multiprocessing
 
-    print('random number: ', np.random.rand())
-
+    # load sampler module
+    sampler_module = getattr(interfaces, config['sampler'])
     target_class = eval(config['target'])
     target = target_class(params['ndim'], **eval(config['target_args']))
     util.count_calls(target, 'pdf', 'pot_gradient')
@@ -104,7 +104,7 @@ def run_single(config, params=None, name='sample', save=True):
 
     print("FINISHED " + str(params) + ':\n' + str(sample), flush=True)
     if save:
-        save_base = join_dir_safe(dir_base, run_config['name'])
+        save_base = join_dir_safe(dir_base, config['name'])
         sample.save(os.path.join(save_base, name))
 
     info = {'mean': sample.mean,
@@ -170,11 +170,15 @@ if __name__ == '__main__':
 
     with open(config_file) as in_file:
         configs = json.load(in_file)
-    for run_config in configs:
-        # load sampler module
-        sampler_module = getattr(interfaces, run_config['sampler'])
 
+    single_configs = [config for config in configs
+                      if 'params_vary' not in config]
+    vary_configs = [config for config in configs
+                    if 'params_vary' in config]
+    for run_config in vary_configs:
         run(run_config)
-        print('CONFIG %s DONE' % run_config['name'])
+
+    with Pool() as pool:
+        pool.map(run, single_configs)
 
     print("SCRIPT DONE")

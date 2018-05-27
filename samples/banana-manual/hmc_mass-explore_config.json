@@ -1,0 +1,20 @@
+[
+  {
+    "name": "hmc-mass-s100-sz.01",
+    "target": "densities.Banana",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15],)",
+    "size": 10000,
+    "params": {
+      "initial": ".4",
+      "step_size": ".01",
+      "steps": "100",
+      "ndim": "2"
+    },
+    "repeats": 10,
+    "params_vary": {
+      "mass": "np.linspace(0.003, 1.0, 20)"
+    }
+  }
+]

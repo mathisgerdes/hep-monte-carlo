@@ -1,0 +1,19 @@
+[
+  {
+    "name": "hmc-stepsize-m100-s50",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15],)",
+    "size": 10000,
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "1.",
+      "steps": "50"
+    },
+    "params_vary": {
+      "step_size": "np.linspace(0.01, 0.35, 80)"
+    }
+  }
+]

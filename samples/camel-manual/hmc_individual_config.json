@@ -1,0 +1,155 @@
+[
+  {
+    "name": "hmc-A",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 10000,
+    "repeats": 5,
+    "save_all": "True",
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "0.1",
+      "steps": "100",
+      "step_size": "0.01"
+    }
+  },
+  {
+    "name": "hmc-B",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 10000,
+    "repeats": 5,
+    "save_all": "True",
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "1.",
+      "steps": "100",
+      "step_size": "0.01"
+    }
+  },
+  {
+    "name": "hmc-C",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 10000,
+    "repeats": 5,
+    "save_all": "True",
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "10.",
+      "steps": "100",
+      "step_size": "0.01"
+    }
+  },
+  {
+    "name": "hmc-D",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 10000,
+    "repeats": 5,
+    "save_all": "True",
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "100.",
+      "steps": "100",
+      "step_size": "0.01"
+    }
+  },
+  {
+    "name": "hmc-E",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 10000,
+    "repeats": 5,
+    "save_all": "True",
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "1000.",
+      "steps": "100",
+      "step_size": "0.01"
+    }
+  },
+  {
+    "name": "hmc-F",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 10000,
+    "repeats": 5,
+    "save_all": "True",
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "1000.",
+      "steps": "100",
+      "step_size": "0.1"
+    }
+  },
+  {
+    "name": "hmc-G",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 10000,
+    "repeats": 5,
+    "save_all": "True",
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "0.1",
+      "steps": "10",
+      "step_size": "0.02"
+    }
+  },
+  {
+    "name": "hmc-H",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 10000,
+    "repeats": 5,
+    "save_all": "True",
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "1e7",
+      "steps": "100",
+      "step_size": "10."
+    }
+  },
+  {
+    "name": "hmc-I",
+    "target": "densities.Camel",
+    "target_args": "{}",
+    "sampler": "plain_hmc",
+    "binning": "([15, 15], ([0., 1.], [0., 1.]))",
+    "size": 10000,
+    "repeats": 5,
+    "save_all": "True",
+    "params": {
+      "ndim": "2",
+      "initial": ".4",
+      "mass": "0.4",
+      "steps": "21",
+      "step_size": "0.009"
+    }
+  }
+]

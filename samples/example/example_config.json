@@ -8,6 +8,8 @@
     "params": {
       "initial": ".4"
     },
+    "repeats": 4,
+    "save_all": "True",
     "params_vary": {
       "ndim": "np.arange(1, 5)"
     }

@@ -35,7 +35,7 @@ def get_sampler(target, ndim, initial, centers, widths, beta,
     util.count_calls(target, 'pot_gradient')
 
     # local sampler
-    momentum_dist = densities.Gaussian(ndim, scale=mass)
+    momentum_dist = densities.Gaussian(ndim, cov=mass)
     local_sampler = HamiltonianUpdate(
         target, momentum_dist, steps, step_size)
 

@@ -2,6 +2,7 @@ from monte_carlo.core.integration import ImportanceMC
 from monte_carlo.core import AcceptRejectSampler
 from monte_carlo.core.densities import ee_qq
 from monte_carlo.core.densities import Rambo
+from monte_carlo.core import phase_space
 #from monte_carlo.plotting.plot_1d import plot_1d
 #from monte_carlo.plotting.plot_2d import plot_2d
 import numpy as np
@@ -22,7 +23,17 @@ importance = ImportanceMC(proposal)
 
 t_start = timer()
 # integration phase
-integration_sample = importance(target, 2)
+integration_sample = importance(target, nsamples)
+print(integration_sample.integral, integration_sample.integral_err)
+
+
+target.mapping = phase_space.map_rambo
+
+bound = np.max(integration_sample.function_values / integration_sample.weights)
+sampler = AcceptRejectSampler(target, bound, ndim)
+sample = sampler.sample(nsamples)
+print(sample)
+print(target.mapping(sample.data, target.E_CM))
 
 # could sample the channels directly
 # sample

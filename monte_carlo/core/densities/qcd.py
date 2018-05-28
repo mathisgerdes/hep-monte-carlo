@@ -3,16 +3,18 @@ import Sherpa
 from ..density import Density
 from ..util import interpret_array
 import numpy as np
-from copy import copy
+
 
 # e+ e- -> q qbar
 class ee_qq(Density):
-    def __init__(self, E_CM):
+    def __init__(self, E_CM, mapping=None):
         ndim = 8
-        self.conversion = 0.389379*1e9 # convert to picobarn
-        self.nfinal = 2 # number of final state particles
+        self.conversion = 0.389379*1e9  # convert to picobarn
+        self.nfinal = 2  # number of final state particles
 
         super().__init__(ndim, False)
+
+        self.mapping = mapping
 
         self.E_CM = E_CM
 
@@ -34,6 +36,8 @@ class ee_qq(Density):
     # The second momentum is xs[4:8]
     def pdf(self, xs):
         xs = interpret_array(xs, self.ndim)
+        if self.mapping:
+            xs = self.mapping(xs, self.E_CM, 2)
         ndim = xs.shape[1]
 
         if ndim != self.ndim:

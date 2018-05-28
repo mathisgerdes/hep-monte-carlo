@@ -18,4 +18,7 @@ class Rambo(Distribution):
         return map_rambo(xs, self.E_CM, self.nparticles)
 
     def pdf(self, xs):
-        return (np.pi/2.)**(self.nparticles-1) * self.E_CM**(2*self.nparticles-4)/gamma(self.nparticles)/gamma(self.nparticles-1)
+        return 1 / (
+                (np.pi/2.)**(self.nparticles-1) *
+                self.E_CM**(2*self.nparticles-4) /
+                gamma(self.nparticles) / gamma(self.nparticles-1))

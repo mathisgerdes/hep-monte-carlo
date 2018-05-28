@@ -52,15 +52,19 @@ def _run_averaging(config):
             av_val = []
             for variation in range(len(results[key][0])):
                 av_val.append(np.mean(
-                    [results[key][i][variation]
-                     for i in range(len(val))], axis=0).tolist())
+                    np.array(
+                        [results[key][i][variation]
+                         for i in range(len(val))],
+                        dtype=np.float), axis=0).tolist())
             results[key] = av_val
         else:
-            results[key] = np.mean(val, axis=0)
+            results[key] = np.mean(np.array(val, dtype=np.float), axis=0)
 
-    results.update({'params_vary': _all_to_list(config['params_vary']),
-                    'params': config['params'],
-                    'sample_size': config['size']})
+    for meta in ['params_vary', 'params', 'size']:
+        try:
+            results[meta] = config[meta]
+        except KeyError:
+            pass  # params vary might not be in config.
 
     save_base = os.path.join(dir_base, name)
     with open(save_base + '.json', 'w') as out_file:

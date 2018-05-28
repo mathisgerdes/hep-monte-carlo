@@ -14,21 +14,23 @@ class Rambo(Distribution):
 
     def rvs(self, sample_size):
         q = np.empty((self.nparticles, 4))
-        Q = np.zeros(4)
-        for i in range(self.nparticles):
-            q_i = self.generate_fourvector()
-            q[i] = q_i
-            Q = Q + q_i
-        
-        M = np.sqrt(Q[0]**2 - Q[1]**2 - Q[2]**2 - Q[3]**2)
-        b = -Q[1:]/M
-        x = self.E_CM/M
-        gamma = Q[0]/M
-        a = 1./(1.+gamma)
-        
+        Q = np.empty(4)
+
         xs = np.empty((sample_size, self.ndim))
         p = np.empty((self.nparticles, 4))
         for j in range(sample_size):
+            Q.fill(0.)
+            for i in range(self.nparticles):
+                q_i = self.generate_fourvector()
+                q[i] = q_i
+                Q = Q + q_i
+
+            M = np.sqrt(Q[0] ** 2 - Q[1] ** 2 - Q[2] ** 2 - Q[3] ** 2)
+            b = -Q[1:] / M
+            x = self.E_CM / M
+            gamma = Q[0] / M
+            a = 1. / (1. + gamma)
+
             for i in range(self.nparticles):
                 q_i = q[i]
                 p_i = np.zeros(4)

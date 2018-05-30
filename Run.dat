@@ -20,8 +20,8 @@
 (beam){
   % collider setup
   
-  BEAM_1  11; BEAM_ENERGY_1 1000.;
-  BEAM_2 -11; BEAM_ENERGY_2 1000.;
+  BEAM_1  11; BEAM_ENERGY_1 50.;
+  BEAM_2 -11; BEAM_ENERGY_2 50.;
   
 }(beam)
 

@@ -1,8 +1,9 @@
 import sys
 import os
 import json
-from multiprocessing import Pool
 import numpy as np
+from multiprocessing import Pool
+from collections import defaultdict
 from monte_carlo import *
 
 
@@ -43,35 +44,37 @@ def _run(config, meta=True):
 
 
 def _run_averaging(config):
-    results = dict()
+    results = defaultdict(list)
     name = config['name']
     for it in range(config['repeats']):
         config['name'] = name + '-run-%d' % (it + 1)
         info = _run(config, meta=False)
         for key in info:
             val = info[key]
-            try:
-                results[key].append(val)
-            except KeyError:
-                results[key] = [val]
+            results[key].append(val)
     config['name'] = name  # restore name
+
+    averaged = dict()
     for key in results:
         val = results[key]
         if isinstance(val[0], list):
             av_val = []
+            var_val = []
             for variation in range(len(results[key][0])):
                 variations = np.array([results[key][i][variation]
                                        for i in range(len(val))], dtype=float)
-                av_val.append(np.mean(variations, axis=0))
-            results[key] = av_val
+                av_val.append(np.nanmean(variations, axis=0))
+                var_val.append(np.nanvar(variations, axis=0))
+            averaged[key] = av_val
+            averaged[key + '_var'] = var_val
         else:
-            results[key] = np.mean(np.array(val, dtype=np.float), axis=0)
+            averaged[key] = np.mean(np.array(val, dtype=np.float), axis=0)
 
-    update_meta(results, config)
+    update_meta(averaged, config)
 
     save_base = os.path.join(dir_base, name)
     with open(save_base + '.json', 'w') as out_file:
-        json.dump(results, out_file, indent=2, cls=NumpyEncoder)
+        json.dump(averaged, out_file, indent=2, cls=NumpyEncoder)
 
 
 def run(config):
@@ -145,7 +148,7 @@ class RunIterator(object):
     def run(self, meta=True):
         print('START ' + self.config['name'], flush=True)
 
-        results = dict()
+        results = defaultdict(list)
         if meta:
             update_meta(results, self.config)
 
@@ -155,10 +158,7 @@ class RunIterator(object):
 
         for info in infos:
             for key in info:
-                try:
-                    results[key].append(info[key])
-                except KeyError:
-                    results[key] = [info[key]]
+                results[key].append(info[key])
 
         with open(self.save_base + '.json', 'w') as out_file:
             json.dump(results, out_file, indent=2, cls=NumpyEncoder)

@@ -44,11 +44,21 @@ def auto_corr(values, mean=None, variance=None):
 
 
 def effective_sample_size(sample, mean, var):
+    """ Estimate the effective sample size of a auto-correlated Markov sample.
+
+    Estimated according to http://arxiv.org/abs/1111.4246
+
+    :param sample: Sample object.
+    :param mean: Mean of distribution, do not approximate via current sample!
+    :param var: Variance of distribution, do not approximate via current sample!
+    :return: Estimate of effective sample size.
+    """
     mean = interpret_array(mean, sample.ndim)
     var = interpret_array(var, sample.ndim)
     sum = np.zeros(sample.ndim)
 
-    acor = auto_corr(sample.data, mean, var)
+    unbias = sample.size / (sample.size - np.arange(sample.size))
+    acor = auto_corr(sample.data, mean, var) * unbias[:, np.newaxis]
     for dim in range(sample.ndim):
         lag = 1
         rho = acor[lag, dim]
@@ -70,7 +80,7 @@ def fd_bins(sample):
     mins = np.min(sample.data, axis=0)
     maxs = np.max(sample.data, axis=0)
     # h=2IQR(x)N^{−1/3} -> N^{-1/(2 + d)}
-    widths = (stats.iqr(sample.data.transpose(), axis=1) *
+    widths = (2 * stats.iqr(sample.data.transpose(), axis=1) *
               sample.size ** (- 1 / (2 + sample.ndim)))
     bins = np.ceil((maxs - mins) / widths).astype(np.int)
     bins = np.maximum(1, bins)
@@ -115,5 +125,5 @@ def bin_wise_chi2(sample, bins=None, bin_range=None,
     f_obs = count[relevant][finals]
     chi2, p = stats.chisquare(f_obs, f_exp=expected[finals])
     if len(f_obs > 0):
-        return chi2 / f_obs.size, p, f_obs.size
-    return 0, 0, 0
+        return chi2 / (f_obs.size-1), p, f_obs.size
+    return None, None, None

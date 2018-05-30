@@ -48,7 +48,7 @@ def plot2d(sample, target=None):
     # rough guess for good binning
     fig = plt.figure(figsize=(14, 7))
 
-    width = 2 if target is None else 3
+    # width = 2 if target is None else 3
     ax1 = plt.subplot2grid((3, 3), (0, 0), colspan=3)
     ax1.set_title('time series')
     ax1.plot(sample.data[:, 0], label="x")
@@ -83,6 +83,7 @@ def plot2d(sample, target=None):
     ax5 = plt.subplot2grid((3, 3), (1, 1), rowspan=2)
     ax5.set_title('scatter plot')
     ax5.scatter(*sample.data.transpose())
+    ax5.set_aspect('equal')
     ax5.grid()
     # if target is not None:
     #     ax5 = plt.subplot2grid((3, width), (1, 1), rowspan=2)

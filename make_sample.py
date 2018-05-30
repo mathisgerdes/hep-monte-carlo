@@ -9,6 +9,14 @@ from monte_carlo import *
 dir_base = None
 
 
+# allow encoding of numpy arrays via tolist
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+
 def join_dir_safe(path, dir_name):
     new_dir = os.path.join(path, dir_name)
     if not os.path.exists(new_dir):
@@ -16,21 +24,22 @@ def join_dir_safe(path, dir_name):
     return new_dir
 
 
-def _all_to_list(dictionary):
-    for key in dictionary:
-        val = dictionary[key]
-        if isinstance(val, np.ndarray):
-            dictionary[key] = val.tolist()
-    return dictionary
+def update_meta(info, config, meta_vars=('params_vary', 'params', 'size')):
+    for meta in meta_vars:
+        try:
+            info[meta] = config[meta]
+        except KeyError:
+            pass  # params vary might not be in config.
 
 
-def _run(config, meta=True, save=True):
+def _run(config, meta=True):
+    save = 'save_all' in config and eval(config['save_all'])
     if 'params_vary' in config:
-        runner = RunIterator(config)
+        runner = RunIterator(config, save=save)
         return runner.run(meta=meta)
     else:
         print('START SINGLE ' + config['name'], flush=True)
-        return run_single(config, save=save)
+        return make_sample(config, save=save)
 
 
 def _run_averaging(config):
@@ -38,7 +47,7 @@ def _run_averaging(config):
     name = config['name']
     for it in range(config['repeats']):
         config['name'] = name + '-run-%d' % (it + 1)
-        info = _run(config, meta=False, save=False)
+        info = _run(config, meta=False)
         for key in info:
             val = info[key]
             try:
@@ -51,24 +60,18 @@ def _run_averaging(config):
         if isinstance(val[0], list):
             av_val = []
             for variation in range(len(results[key][0])):
-                av_val.append(np.mean(
-                    np.array(
-                        [results[key][i][variation]
-                         for i in range(len(val))],
-                        dtype=np.float), axis=0).tolist())
+                variations = np.array([results[key][i][variation]
+                                       for i in range(len(val))], dtype=float)
+                av_val.append(np.mean(variations, axis=0))
             results[key] = av_val
         else:
             results[key] = np.mean(np.array(val, dtype=np.float), axis=0)
 
-    for meta in ['params_vary', 'params', 'size']:
-        try:
-            results[meta] = config[meta]
-        except KeyError:
-            pass  # params vary might not be in config.
+    update_meta(results, config)
 
     save_base = os.path.join(dir_base, name)
     with open(save_base + '.json', 'w') as out_file:
-        json.dump(_all_to_list(results), out_file, indent=2)
+        json.dump(results, out_file, indent=2, cls=NumpyEncoder)
 
 
 def run(config):
@@ -87,10 +90,10 @@ def run(config):
     print('CONFIG %s DONE' % config['name'], flush=True)
 
 
-def run_single(config, params=None, name='sample', save=True):
+def make_sample(config, params=None, name='sample', save=True):
     if params is None:
         params = config['params']
-    print("STARTING RUN " + str(params), flush=True)
+    print("START SAMPLING " + str(params), flush=True)
     np.random.seed()  # important for multiprocessing
 
     # load sampler module
@@ -106,7 +109,7 @@ def run_single(config, params=None, name='sample', save=True):
         binning = eval(config['binning'])
         sample._bin_wise_chi2 = util.bin_wise_chi2(sample, *binning)
 
-    print("FINISHED " + str(params) + ':\n' + str(sample), flush=True)
+    print("FINISHED SAMPLING " + str(params) + ':\n' + str(sample), flush=True)
     if save:
         save_base = join_dir_safe(dir_base, config['name'])
         sample.save(os.path.join(save_base, name))
@@ -120,15 +123,14 @@ def run_single(config, params=None, name='sample', save=True):
             'chi2': sample.bin_wise_chi2[0],
             'chi2_p': sample.bin_wise_chi2[1],
             'chi2_n': sample.bin_wise_chi2[2]}
-    return _all_to_list(info)
+    return info
 
 
 class RunIterator(object):
-    def __init__(self, config):
+    def __init__(self, config, save=False):
         self.save_base = os.path.join(dir_base, config['name'])
         self.config = config
-
-        self.params = config['params']
+        self.save = save
 
         self.vary_names = list(config['params_vary'].keys())
         self.vary_values = list(config['params_vary'].values())
@@ -136,23 +138,20 @@ class RunIterator(object):
     def run_iter(self, index):
         vary_values = [val[index] for val in self.vary_values]
         params_iter = dict(zip(self.vary_names, vary_values))
-        params_iter.update(self.params)
-        save = 'save_all' in self.config and eval(self.config['save_all'])
-        return run_single(self.config, params_iter, 'var-%d' % index, save=save)
+        params_iter.update(self.config['params'])
+        return make_sample(
+            self.config, params_iter, 'var-%d' % index, save=self.save)
 
     def run(self, meta=True):
         print('START ' + self.config['name'], flush=True)
 
         results = dict()
-        vars_lists = [np.array(v).tolist() for v in self.vary_values]
         if meta:
-            results = {'params_vary': dict(zip(self.vary_names, vars_lists)),
-                       'params': self.params,
-                       'sample_size': self.config['size']}
+            update_meta(results, self.config)
 
         indices = list(range(len(self.vary_values[0])))
-        with Pool() as pool:
-            infos = pool.map(self.run_iter, indices)
+        with Pool() as param_pool:
+            infos = param_pool.map(self.run_iter, indices)
 
         for info in infos:
             for key in info:
@@ -162,7 +161,7 @@ class RunIterator(object):
                     results[key] = [info[key]]
 
         with open(self.save_base + '.json', 'w') as out_file:
-            json.dump(results, out_file, indent=2)
+            json.dump(results, out_file, indent=2, cls=NumpyEncoder)
 
         return results
 
@@ -175,14 +174,25 @@ if __name__ == '__main__':
     with open(config_file) as in_file:
         configs = json.load(in_file)
 
+    try:
+        begin = int(sys.argv[2])
+        try:
+            end = int(sys.argv[3])
+            configs = configs[begin:end]  # run a subset of configs
+        except IndexError:
+            configs = [configs[begin]]  # run only one config
+    except IndexError:
+        pass  # run all configs in config file
+
     single_configs = [config for config in configs
                       if 'params_vary' not in config]
     vary_configs = [config for config in configs
                     if 'params_vary' in config]
+
     for run_config in vary_configs:
         run(run_config)
 
     with Pool() as pool:
         pool.map(run, single_configs)
 
-    print("SCRIPT DONE")
+    print("SCRIPT DONE", flush=True)

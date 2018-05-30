@@ -44,7 +44,7 @@ class Gaussian(Distribution):
 
     def pot_gradient(self, xs):
         xs = interpret_array(xs, self.ndim)
-        return np.einsum('ij,kj->ki', self._cov_inv, xs)
+        return np.einsum('ij,kj->ki', self._cov_inv, xs - self.mean)
 
     def rvs(self, sample_size):
         sample = np.random.multivariate_normal(self.mean, self.cov, sample_size)

@@ -116,3 +116,7 @@ mcmcmc.kdev4
 
 # pycharm
 /.idea/
+
+# sherpa
+/Process/
+Sherpa_References.tex

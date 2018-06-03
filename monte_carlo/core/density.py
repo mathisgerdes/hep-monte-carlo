@@ -1,4 +1,5 @@
 import numpy as np
+from copy import copy
 
 from .util import interpret_array
 
@@ -96,6 +97,22 @@ class Density(_AnyDensity):
             obj.mean = mean
         return obj
 
+    def mapped_in(self, new_ndim, mapping, *mapping_args, **mapping_kwargs):
+        mapped = copy(self)
+
+        def get_mapped(old_fn):
+            def mapped_fn(xs, *args, **kwargs):
+                xs = interpret_array(xs, new_ndim)
+                xs = mapping(xs, *mapping_args, **mapping_kwargs)
+                return old_fn(xs, *args, **kwargs)
+            return mapped_fn
+
+        for fn_name in ['pot', 'pot_gradient', 'pdf', 'pdf_gradient']:
+            setattr(mapped, fn_name, get_mapped(getattr(self, fn_name)))
+
+        mapped.ndim = new_ndim
+        return mapped
+
 
 class Distribution(Density, Proposal):
 
@@ -122,3 +139,14 @@ class Distribution(Density, Proposal):
 
         obj.rvs = lambda count: interpret_array(rvs(count), ndim)
         return obj
+
+    def mapped_out(self, mapping, *map_args, **map_kwargs):
+        mapped = copy(self)
+
+        def get_mapped(old_fn):
+            def mapped_fn(*args, **kwargs):
+                return mapping(old_fn(*args, **kwargs), *map_args, **map_kwargs)
+            return mapped_fn
+
+        mapped.rvs = get_mapped(mapped.rvs)
+        return mapped

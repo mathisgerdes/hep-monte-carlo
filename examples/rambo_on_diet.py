@@ -21,16 +21,16 @@ target_pdf = target.pdf
 proposal = RamboOnDiet(2, E_CM)
 importance = ImportanceMC(proposal)
 
-t_start = timer()
+# t_start = timer()
 # integration phase
 integration_sample = importance(target, nsamples)
 print(integration_sample.integral, integration_sample.integral_err)
 
 
-#target.mapping = phase_space.map_rambo_on_diet
-#
-#bound = np.max(integration_sample.function_values / integration_sample.weights)
-#sampler = AcceptRejectSampler(target, bound, ndim)
-#sample = sampler.sample(nsamples)
-#print(sample)
-#print(target.mapping(sample.data, target.E_CM))
+target = target.mapped_in(ndim, phase_space.map_rambo_on_diet, E_CM, 2)
+
+bound = np.max(integration_sample.function_values / integration_sample.weights)
+sampler = AcceptRejectSampler(target, bound, target.ndim)
+sample = sampler.sample(nsamples)
+print(sample)
+print(phase_space.map_rambo_on_diet(sample.data, E_CM))

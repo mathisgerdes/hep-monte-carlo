@@ -27,13 +27,13 @@ integration_sample = importance(target, nsamples)
 print(integration_sample.integral, integration_sample.integral_err)
 
 
-target.mapping = phase_space.map_rambo
+target = target.mapped_in(ndim, phase_space.map_rambo)
 
 bound = np.max(integration_sample.function_values / integration_sample.weights)
 sampler = AcceptRejectSampler(target, bound, ndim)
 sample = sampler.sample(nsamples)
 print(sample)
-print(target.mapping(sample.data, target.E_CM))
+print(phase_space.map_rambo(sample.data, target.E_CM))
 
 # could sample the channels directly
 # sample

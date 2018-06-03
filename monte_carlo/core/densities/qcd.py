@@ -7,19 +7,20 @@ import numpy as np
 
 # e+ e- -> q qbar
 class ee_qq(Density):
-    def __init__(self, E_CM, mapping=None):
+    def __init__(self, E_CM):
         ndim = 8
         self.conversion = 0.389379*1e9  # convert to picobarn
         self.nfinal = 2  # number of final state particles
 
         super().__init__(ndim, False)
 
-        self.mapping = mapping
-
         self.E_CM = E_CM
 
         self.Generator = Sherpa.Sherpa()
-        self.Generator.InitializeTheRun(3, [''.encode('ascii'), 'INIT_ONLY=2'.encode('ascii'), 'OUTPUT=0'.encode('ascii')])
+        self.Generator.InitializeTheRun(3,
+                                        [''.encode('ascii'),
+                                         'INIT_ONLY=2'.encode('ascii'),
+                                         'OUTPUT=0'.encode('ascii')])
         self.Process = Sherpa.MEProcess(self.Generator)
 
         # Incoming flavors must be added first!
@@ -36,8 +37,7 @@ class ee_qq(Density):
     # The second momentum is xs[4:8]
     def pdf(self, xs):
         xs = interpret_array(xs, self.ndim)
-        if self.mapping:
-            xs = self.mapping(xs, self.E_CM, 2)
+
         ndim = xs.shape[1]
 
         if ndim != self.ndim:
@@ -53,4 +53,5 @@ class ee_qq(Density):
             self.Process.SetMomentum(3, p2[i, 0], p2[i, 1], p2[i, 2], p2[i, 3])
             me[i] = self.Process.CSMatrixElement()
 
-        return self.conversion * (2.*np.pi)**(4.-3.*self.nfinal)/(2.*self.E_CM**2) * me
+        xs = (2. * np.pi) ** (4.-3. * self.nfinal) / (2. * self.E_CM ** 2) * me
+        return self.conversion * xs

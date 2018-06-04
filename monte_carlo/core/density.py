@@ -97,20 +97,34 @@ class Density(_AnyDensity):
             obj.mean = mean
         return obj
 
-    def mapped_in(self, new_ndim, mapping, *mapping_args, **mapping_kwargs):
+    def mapped_in(self, new_ndim, mapping, map_pdf, *map_args, **map_kwargs):
         mapped = copy(self)
 
         def get_mapped(old_fn):
             def mapped_fn(xs, *args, **kwargs):
                 xs = interpret_array(xs, new_ndim)
-                xs = mapping(xs, *mapping_args, **mapping_kwargs)
-                return old_fn(xs, *args, **kwargs)
+                xs = mapping(xs, *map_args, **map_kwargs)
+                norm = map_pdf(xs, *map_args, **map_kwargs)
+                return old_fn(xs, *args, **kwargs) / norm
             return mapped_fn
 
         for fn_name in ['pot', 'pot_gradient', 'pdf', 'pdf_gradient']:
             setattr(mapped, fn_name, get_mapped(getattr(self, fn_name)))
 
         mapped.ndim = new_ndim
+        return mapped
+
+    def normalized(self, norm_factor):
+        mapped = copy(self)
+
+        def get_mapped(old_fn):
+            def mapped_fn(xs, *args, **kwargs):
+                return old_fn(xs, *args, **kwargs) / norm_factor
+            return mapped_fn
+
+        for fn_name in ['pot', 'pot_gradient', 'pdf', 'pdf_gradient']:
+            setattr(mapped, fn_name, get_mapped(getattr(self, fn_name)))
+
         return mapped
 
 

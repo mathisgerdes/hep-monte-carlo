@@ -27,10 +27,12 @@ integration_sample = importance(target, nsamples)
 print(integration_sample.integral, integration_sample.integral_err)
 
 
-target = target.mapped_in(ndim, phase_space.map_rambo_on_diet, E_CM, 2)
+target = target.mapped_in(
+    ndim, phase_space.map_rambo_on_diet, phase_space.rambo_pdf, E_CM, 2)
+target = target.normalized(integration_sample.integral)
 
 bound = np.max(integration_sample.function_values / integration_sample.weights)
-sampler = AcceptRejectSampler(target, bound, target.ndim)
+sampler = AcceptRejectSampler(target, bound/integration_sample.integral, target.ndim)
 sample = sampler.sample(nsamples)
 print(sample)
 print(phase_space.map_rambo_on_diet(sample.data, E_CM))

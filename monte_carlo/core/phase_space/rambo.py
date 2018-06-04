@@ -1,8 +1,18 @@
 import numpy as np
 from scipy.optimize import brentq
+from math import gamma
 
 
 MINKOWSKI = np.diag([1, -1, -1, -1])
+
+
+def rambo_pdf(xs, E_CM, nparticles=None):
+    if nparticles is None:
+        nparticles = xs.shape[1] // 4
+
+    vol = ((np.pi / 2.) ** (nparticles - 1) * E_CM ** (2 * nparticles - 4) /
+           (gamma(nparticles) * gamma(nparticles - 1)))
+    return 1 / vol
 
 
 def map_fourvector_rambo(xs):
@@ -51,8 +61,10 @@ def map_rambo(xs, E_CM, nparticles=None):
 
     return p.reshape(xs.shape)
 
+
 def two_body_decay_factor(M_i_minus_1, M_i, m_i_minus_1):
     return 1./(8*M_i_minus_1**2) * np.sqrt((M_i_minus_1**2 - (M_i+m_i_minus_1)**2)*(M_i_minus_1**2 - (M_i-m_i_minus_1)**2))
+
 
 def boost(q, ph):
     p = np.empty(q.shape)
@@ -64,6 +76,7 @@ def boost(q, ph):
     p[:, 1:] = ph[:, 1:] + c1[:, np.newaxis]*q[:, 1:]
 
     return p
+
 
 def map_rambo_on_diet(xs, E_CM, nparticles=None):
     if nparticles is None:

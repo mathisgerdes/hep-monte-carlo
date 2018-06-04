@@ -1,7 +1,6 @@
 import numpy as np
-from math import gamma
 from ..density import Distribution
-from ..phase_space import map_rambo, map_rambo_on_diet
+from ..phase_space import map_rambo, map_rambo_on_diet, rambo_pdf
 
 
 class Rambo(Distribution):
@@ -18,10 +17,8 @@ class Rambo(Distribution):
         return map_rambo(xs, self.E_CM, self.nparticles)
 
     def pdf(self, xs):
-        return 1 / (
-                (np.pi/2.)**(self.nparticles-1) *
-                self.E_CM**(2*self.nparticles-4) /
-                gamma(self.nparticles) / gamma(self.nparticles-1))
+        return rambo_pdf(xs, self.E_CM, self.nparticles)
+
 
 class RamboOnDiet(Distribution):
 
@@ -37,7 +34,4 @@ class RamboOnDiet(Distribution):
         return map_rambo_on_diet(xs, self.E_CM, self.nparticles)
 
     def pdf(self, xs):
-        return 1 / (
-                (np.pi/2.)**(self.nparticles-1) *
-                self.E_CM**(2*self.nparticles-4) /
-                gamma(self.nparticles) / gamma(self.nparticles-1))
+        return rambo_pdf(xs, self.E_CM, self.nparticles)

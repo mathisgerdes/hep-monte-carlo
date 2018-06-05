@@ -32,7 +32,8 @@ run the following:
 
 ## Run the Jupyter notebooks
 The Jupyter notebooks in `notebooks` depend on the package. The following
-installs an ipykernel corresponding to the virtualenv (containing hepmc)
+installs an ipykernel corresponding to the virtualenv (containing hepmc).
+Run the notebook server from outside the virtual environment.
 - Within the virtualenv active, run `pip install ipykernel`
 - Install a kernel: `ipython kernel install --user --name=hepmc`
 

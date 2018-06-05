@@ -1,10 +1,10 @@
-from monte_carlo.core.integration import ImportanceMC
-from monte_carlo.core import AcceptRejectSampler
-from monte_carlo.core.densities import ee_qq
-from monte_carlo.core.densities import RamboOnDiet
-from monte_carlo.core import phase_space
-#from monte_carlo.plotting.plot_1d import plot_1d
-#from monte_carlo.plotting.plot_2d import plot_2d
+from hepmc.core.integration import ImportanceMC
+from hepmc.core import AcceptRejectSampler
+from hepmc.core.densities import ee_qq
+from hepmc.core.densities import RamboOnDiet
+from hepmc.core import phase_space
+#from hepmc.plotting.plot_1d import plot_1d
+#from hepmc.plotting.plot_2d import plot_2d
 import numpy as np
 from timeit import default_timer as timer
 

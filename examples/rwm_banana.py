@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from monte_carlo import densities, proposals, DefaultMetropolis
+from hepmc import densities, proposals, DefaultMetropolis
 import numpy as np
 import matplotlib.pyplot as plt
 

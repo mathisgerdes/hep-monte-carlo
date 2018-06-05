@@ -1,5 +1,5 @@
 import numpy as np
-from monte_carlo import densities
+from .. import densities
 
 from unittest import TestCase
 

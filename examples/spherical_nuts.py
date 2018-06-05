@@ -1,7 +1,7 @@
-from monte_carlo import densities
-from monte_carlo.hamiltonian import SphericalNUTS
-from monte_carlo.plotting.plot_1d import plot_1d
-from monte_carlo.plotting.plot_2d import plot_2d
+from hepmc import densities
+from hepmc.hamiltonian import SphericalNUTS
+from hepmc.plotting.plot_1d import plot_1d
+from hepmc.plotting.plot_2d import plot_2d
 import numpy as np
 from timeit import default_timer as timer
 

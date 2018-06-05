@@ -14,7 +14,7 @@ class ImportanceMC(object):
         equivalent to plain MC.
 
         Example:
-            >>> from monte_carlo import densities
+            >>> from hepmc import densities
             >>> sampling = lambda size: np.random.rand(size)**2
             >>> pdf = lambda x: 2*x
             >>> dist = Density.make(ndim=1, pdf=pdf, rvs=sampling)
@@ -71,7 +71,7 @@ class MultiChannelMC(object):
             estimate the integral.
 
         Example:
-            >>> from monte_carlo import densities
+            >>> from hepmc import densities
             >>> channels = MultiChannel([densities.Uniform(1)])
             >>> mc_imp = MultiChannelMC(channels)  # same as plain MC
             >>> est, err = mc_imp(lambda x: x, [], [100], [])

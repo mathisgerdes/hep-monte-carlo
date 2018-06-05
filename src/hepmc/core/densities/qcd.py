@@ -2,7 +2,11 @@ import sys
 import Sherpa
 from ..density import Density
 from ..util import interpret_array
+import pkg_resources
 import numpy as np
+
+
+RUNCARD = pkg_resources.resource_filename('hepmc', 'data/ee_qq.dat')
 
 
 # e+ e- -> q qbar
@@ -19,6 +23,7 @@ class ee_qq(Density):
         self.Generator = Sherpa.Sherpa()
         self.Generator.InitializeTheRun(3,
                                         [''.encode('ascii'),
+                                         ('RUNDATA=' + RUNCARD).encode('ascii'),
                                          'INIT_ONLY=2'.encode('ascii'),
                                          'OUTPUT=0'.encode('ascii')])
         self.Process = Sherpa.MEProcess(self.Generator)

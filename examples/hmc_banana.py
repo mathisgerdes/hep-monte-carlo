@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from monte_carlo import hamiltonian, densities
+from hepmc import hamiltonian, densities
 import numpy as np
 import matplotlib.pyplot as plt
 

@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from monte_carlo import *
-from monte_carlo.mc3 import *
+from .. import *
+from ..mc3 import *
 
 
 class PlainMC3Test(TestCase):

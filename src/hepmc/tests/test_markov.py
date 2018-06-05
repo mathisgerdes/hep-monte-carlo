@@ -1,5 +1,5 @@
 import numpy as np
-from monte_carlo import *
+from .. import *
 
 from unittest import TestCase
 
@@ -20,11 +20,6 @@ class MetropTest(TestCase):
     def test_local(self):
         ndim = 2
         delta = 0.01
-
-        def local(state):
-            base = np.maximum(np.zeros(ndim), state - delta / 2)
-            base_capped = np.minimum(base, np.ones(ndim) - delta)
-            return base_capped + np.random.rand() * delta
 
         local = proposals.UniformLocal(ndim, delta)
 

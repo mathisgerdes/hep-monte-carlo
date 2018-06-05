@@ -4,7 +4,7 @@ import json
 import numpy as np
 from multiprocessing import Pool
 from collections import defaultdict
-from monte_carlo import *
+from hepmc import *
 
 
 dir_base = None

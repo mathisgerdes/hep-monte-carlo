@@ -1,5 +1,5 @@
 import numpy as np
-from monte_carlo import *
+from .. import *
 
 from unittest import TestCase
 

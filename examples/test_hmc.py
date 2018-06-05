@@ -1,5 +1,5 @@
-from monte_carlo.plotting.plot_2d import plot_2d
-from monte_carlo import *
+from hepmc.plotting.plot_2d import plot_2d
+from hepmc import *
 import numpy as np
 
 np.seterr(all='warn')

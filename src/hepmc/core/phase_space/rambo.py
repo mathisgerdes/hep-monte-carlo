@@ -121,6 +121,33 @@ class RamboOnDiet(PhaseSpaceMapping):
 
         return p.reshape((xs.shape[0], nparticles * 4))
 
+    def map_inverse(self, p):
+        p = p.reshape((p.shape[0], self.nparticles, 4))
+
+        M = np.empty(p.shape[0])
+        M_prev = np.empty(p.shape[0])
+        Q = np.empty((p.shape[0], 4))
+        r = np.empty((p.shape[0], 3*self.nparticles-4))
+
+        Q[:] = p[:, -1]
+
+        for i in range(self.nparticles, 1, -1):
+            M_prev[:] = M[:]
+            P = p[:, i-2:].sum(axis=1)
+            M = np.sqrt(np.einsum('ij,jk,ik->i', P, MINKOWSKI, P))
+
+            if i != self.nparticles:
+                u = M_prev/M
+                r[:, i-2] = (self.nparticles+1-i)*u**(2*(self.nparticles-i)) - (self.nparticles-i)*u**(2*(self.nparticles+1-i))
+
+            Q += p[:, i-2]
+            p_prime = boost(np.einsum('ij,ki->kj', MINKOWSKI, Q), p[:, i-2])
+            r[:, self.nparticles-6+2*i] = .5 * (p_prime[:, 3]/np.sqrt(np.sum(p_prime[:, 1:]**2, axis=1)) + 1)
+            phi = np.arctan2(p_prime[:, 2], p_prime[:, 1])
+            r[:, self.nparticles-5+2*i] = phi/(2*np.pi) + (phi<0)
+
+        return r
+
     def pdf(self, xs):
         nparticles = self.nparticles
         e_cm = self.e_cm

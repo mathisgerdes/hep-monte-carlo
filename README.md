@@ -1,4 +1,4 @@
-# Monta Carlo Methods for High Energy Physics
+# Monte Carlo Methods for High Energy Physics
 
 This repository contains the `hepmc` package (high energy physics - Monte Carlo)
 providing several Monte Carlo methods of interest to applications in 

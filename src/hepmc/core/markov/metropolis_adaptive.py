@@ -1,5 +1,44 @@
 import numpy as np
-from .metropolis import DefaultMetropolis, MetropolisState
+from .metropolis import DefaultMetropolis
+
+
+class StochasticOptimizeUpdate(DefaultMetropolis):
+    """
+    Adapts the cov of a local proposal distribution by dual averaging
+    """
+    def __init__(self, target_density, local_dist, target_rate=0.6,
+                 adapt_schedule=None, kappa=0.75, mult=0.005, t0=1):
+        super().__init__(target_density.ndim, target_density, adaptive=True,
+                         proposal=local_dist)
+
+        if adapt_schedule is None:
+            def adapt_schedule(t):
+                return mult * np.power(t, -kappa)
+
+        self.adapt_schedule = adapt_schedule
+        self.local_dist = local_dist
+        self.target_rate = target_rate
+        self.t0 = t0
+
+        # used / set later
+        self.accepted = 0
+        self.generated = 0
+
+    def init_adapt(self, initial_state):
+        self.accepted = 0
+        self.generated = 0
+
+    def adapt(self, t, prev, current, accept):
+        if t > self.t0:
+            Ht = self.target_rate - self.accepted / self.generated
+            self.local_dist.cov = np.abs(
+                self.local_dist.cov - Ht * self.adapt_schedule(t))
+
+    def next_state(self, state, iteration):
+        next_state = super().next_state(state, iteration)
+        self.generated += 1
+        self.accepted += not np.array_equal(state, next_state)
+        return next_state
 
 
 class AdaptiveMetropolisUpdate(DefaultMetropolis):

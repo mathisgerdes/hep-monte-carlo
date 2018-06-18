@@ -97,7 +97,7 @@ class MetropolisUpdate(MarkovUpdate):
 
 class DefaultMetropolis(MetropolisUpdate):
 
-    def __init__(self, ndim, target, proposal=None):
+    def __init__(self, ndim, target, proposal=None, adaptive=False):
         """ Use the Metropolis algorithm to generate a sample.
 
         Example:
@@ -117,7 +117,7 @@ class DefaultMetropolis(MetropolisUpdate):
 
         # must be at the and since it calls proposal_pdf to see if it works
         super().__init__(ndim, target,
-                         adaptive=False, hasting=not proposal.is_symmetric)
+                         adaptive=adaptive, hasting=not proposal.is_symmetric)
 
     def proposal(self, state):
         candidate = self._proposal.proposal(np.asarray(state))

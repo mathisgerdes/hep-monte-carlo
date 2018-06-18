@@ -69,5 +69,5 @@ from . import phase_space
 from .integration import *
 from .markov import *
 
-from .sampling import AcceptRejectSampler
+from .sampling import AcceptRejectSampler, Sample
 from .density import Proposal, Density, Distribution

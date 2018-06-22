@@ -113,7 +113,7 @@ class Distribution(Density, Proposal):
         return self.rvs(1)[0]
 
     def proposal_pdf(self, state, candidate):
-        return self.pdf(candidate)[0]
+        return float(self.pdf(candidate))
 
     @classmethod
     def make(cls, pdf=None, ndim=None, rvs=None, **kwargs):

@@ -1,0 +1,46 @@
+(run){
+  % general settings
+  EVENTS 2000;
+  ACUT:=cos(0.3);
+  PTCUT:=5.;
+  ME_SIGNAL_GENERATOR=Amegic
+  SHERPA_LDADD SherpaMain;
+
+  % model parameters
+  HARD_DECAYS Off;
+  MI_HANDLER None;
+  FRAGMENTATION Off;
+  SHOWER_GENERATOR None;
+  PDF_LIBRARY None;
+
+  SCALES VAR{sqr(E_CMS)};
+}(run)
+
+(isr){
+  PDF_LIBRARY None;
+}(isr)
+
+(beam){
+  % collider setup
+
+  BEAM_1  11; BEAM_ENERGY_1 50.;
+  BEAM_2 -11; BEAM_ENERGY_2 50.;
+
+}(beam)
+
+(processes){
+  Process 11 -11 -> 1 -1 21;
+  Order (*,2);
+  End process;
+}(processes)
+
+(selector){
+  PT 1 PTCUT E_CMS;
+  PT -1 PTCUT E_CMS;
+  PT 21 PTCUT E_CMS;
+  Angle 1 -1 -1.0 ACUT;
+  Angle 1 21 -1.0 ACUT;
+  Angle -1 21 -1.0 ACUT;
+  Angle 21 21 -1.0 ACUT;
+}(selector)
+

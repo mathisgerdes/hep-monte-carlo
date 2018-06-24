@@ -2,20 +2,9 @@ import numpy as np
 from scipy.optimize import brentq
 from math import gamma
 from ..util import interpret_array
-
+from .mapping import PhaseSpaceMapping
 
 MINKOWSKI = np.diag([1, -1, -1, -1])
-
-
-class PhaseSpaceMapping(object):
-    def __init__(self, ndim):
-        self.ndim = ndim
-
-    def pdf(self, xs):
-        raise NotImplementedError
-
-    def map(self, xs):
-        raise NotImplementedError
 
 
 class Rambo(PhaseSpaceMapping):
@@ -67,6 +56,12 @@ class Rambo(PhaseSpaceMapping):
                     q[:, :, 1:] + b * q[:, :, 0, np.newaxis] + a * bdotq * b)
 
         return p.reshape(xs.shape)
+
+    def pdf_gradient(self, xs):
+        return 0
+
+    def map_inverse(self, xs):
+        raise NotImplementedError
 
 
 class RamboOnDiet(PhaseSpaceMapping):
@@ -122,7 +117,8 @@ class RamboOnDiet(PhaseSpaceMapping):
         return p.reshape((xs.shape[0], nparticles * 4))
 
     def map_inverse(self, p):
-        p = p.reshape((p.shape[0], self.nparticles, 4))
+        count = p.size // (self.nparticles * 4)
+        p = p.reshape((count, self.nparticles, 4))
 
         M = np.empty(p.shape[0])
         M_prev = np.empty(p.shape[0])
@@ -157,6 +153,9 @@ class RamboOnDiet(PhaseSpaceMapping):
         vol = ((np.pi / 2.) ** (nparticles - 1) * e_cm ** (2 * nparticles - 4) /
                (gamma(nparticles) * gamma(nparticles - 1)))
         return 1 / vol
+
+    def pdf_gradient(self, xs):
+        return 0
 
 
 def map_fourvector_rambo(xs):

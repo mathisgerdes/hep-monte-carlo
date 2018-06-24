@@ -138,7 +138,8 @@ class CompositeMarkovUpdate(MarkovUpdate):
 
 class MixingMarkovUpdate(MarkovUpdate):
 
-    def __init__(self, ndim, updates, weights=None, masks=None, target=None):
+    def __init__(self, ndim, updates, weights=None, masks=None,
+                 in_maps=None, out_maps=None, target=None):
         """ Mix a number of update mechanisms, choosing one in each step.
 
         :param updates: List of update mechanisms (AbstractMarkovUpdate).
@@ -162,18 +163,37 @@ class MixingMarkovUpdate(MarkovUpdate):
             weights = np.ones(self.updates_count) / self.updates_count
         self.weights = weights
 
+        self.in_maps = in_maps or dict()
+        self.out_maps = out_maps or dict()
+
     def init_adapt(self, initial_state):
-        for update in self.updates:
-            state = update.init_state(initial_state)
+        for i, update in enumerate(self.updates):
+            try:
+                init = self.in_maps[i](initial_state)
+            except KeyError:
+                init = initial_state
+            state = update.init_state(init)
             update.init_adapt(state)
 
     def next_state(self, state, iteration):
         index = np.random.choice(self.updates_count, p=self.weights)
+        update = self.updates[index]
+
+        try:
+            state = self.in_maps[index](state).flatten()
+        except KeyError:
+            pass
+
         if self.masks[index] is None:
-            state = self.updates[index].init_state(state)
-            return self.updates[index].next_state(state, iteration)
+            state = update.init_state(state)
+            next_state = update.next_state(state, iteration)
         else:
             mask = self.masks[index]
             state = np.copy(state)
-            state[mask] = self.updates[index].next_state(state[mask], iteration)
-            return state
+            state[mask] = update.next_state(state[mask], iteration)
+            next_state = state
+
+        try:
+            return self.out_maps[index](next_state).flatten()
+        except KeyError:
+            return next_state
